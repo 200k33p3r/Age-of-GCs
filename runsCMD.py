@@ -5,7 +5,7 @@ import time
 
 class sCMD:
 	def CMD_gen(self):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', '0.02', '4000000', str(self.age)])
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', '0.02', '4000000', str(self.age), str(self.GC_name)])
 
 	def CMD_check(self):
 		check_time = 0
