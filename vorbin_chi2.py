@@ -245,6 +245,8 @@ class resample(utiles):
 		self.check_directories(vorbin_path)
 		self.check_directories(chi2_path)
 		self.check_directories(cmd_path)
+		#assign other global variables
+		self.Tb_size = Tb_size
 		#read obs data
 		self.read_input(obs_data_path,photometry_path)
 		#run resample
