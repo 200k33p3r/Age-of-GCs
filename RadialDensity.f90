@@ -10,10 +10,10 @@ program RadialDensity
   real, parameter :: xguess = 3000
   real, parameter :: yguess = 3000
   real, parameter :: radius = 200  !200 pixels from guess center
-  real, parameter :: Vmax = -11.70
-  real, parameter :: Vmin = -15.69
-  real, parameter :: VImin = -0.27
-  real, parameter :: VImax = 0.06
+  real, parameter :: Vmax = 19.279
+  real, parameter :: Vmin = 15.297
+  real, parameter :: VImin = 0.473
+  real, parameter :: VImax = 0.791
   integer :: Nstars,nfit,i,j,id,nage
   REAL, dimension(:),allocatable :: xx,yy,fit_id
   REAL, dimension(:),allocatable :: xt,yt,vt,vit,dist2,idlist

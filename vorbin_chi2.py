@@ -196,21 +196,31 @@ class resample(utiles):
 		#read AS test error
 		self.dps_Ierr = []
 		self.dps_Verr = []
+		self.completeness_V = []
+		self.completeness_I = []
 		for i in range(80):
-			self.dps_Ierr.append(pd.read_csv("{}\\Ierr{:02d}.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
-			self.dps_Verr.append(pd.read_csv("{}\\Verr{:02d}.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			self.dps_Ierr.append(pd.read_csv("{}\\Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
+			self.dps_Verr.append(pd.read_csv("{}\\Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			self.completeness_V.append(pd.read_csv("{}\\Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+			self.completeness_I.append(pd.read_csv("{}\\Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 
 	def resample(self,i,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
 		sample_list = np.random.randint(0,len(self.obs_data),size=self.sample_pt)
 		Ierr = np.zeros(self.sample_pt)
 		Verr = np.zeros(self.sample_pt)
+		Mask = [True]*self.sample_pt
 		#print(self.obs_data['Ibin'] - 1)
 		for i in range(self.sample_pt):
 			Ierr[i] = self.dps_Ierr[self.obs_data['Ibin']-1]['Ierr'].values[np.random.randint(0, high=len(self.dps_Ierr[self.obs_data['Ibin']-1]))]
 			Verr[i] = self.dps_Verr[self.obs_data['Vbin']-1]['Verr'].values[np.random.randint(0, high=len(self.dps_Verr[self.obs_data['Vbin']-1]))]
+			#completeness test
+			if np.random.rand() > (self.completeness_V[self.obs_data['Vbin']-1]*self.completeness_I[self.obs_data['Ibin']-1]):
+				Mask[i] == False
 		Vvega = self.obs_data['v'].values[sample_list] + Verr
 		Ivega = self.obs_data['i'].values[sample_list] + Ierr
 		VIvega = Vvega - Ivega
+		Vvega = Vvega[Mask]
+		VI_vega= VI_vega[Mask]
 		data_resample = {'v':Vvega, 'vi':VIvega}
 		dp = pd.DataFrame(data=data_resample)
 		df_resample = dp[(dp['vi'] < (obs_vi_max)) & (dp['vi'] > (obs_vi_min))& (dp['v'] < (obs_v_max)) & (dp['v'] > (obs_v_min))]
@@ -234,7 +244,7 @@ class resample(utiles):
 		obs_v_min = 15.006
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#define all the path for read and write
-		obs_data_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\{}_fitstars.dat".format(GC_name,GC_name)
+		obs_data_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\{}_fitstars_with_bins.dat".format(GC_name,GC_name)
 		photometry_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\inputfiles".format(GC_name)
 		vorbin_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\vorbin".format(GC_name)
 		chi2_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\outchi2".format(GC_name)
