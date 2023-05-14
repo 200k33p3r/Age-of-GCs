@@ -211,16 +211,16 @@ class resample(utiles):
 		Mask = [True]*self.sample_pt
 		#print(self.obs_data['Ibin'] - 1)
 		for i in range(self.sample_pt):
-			Ierr[i] = self.dps_Ierr[self.obs_data['Ibin']-1]['Ierr'].values[np.random.randint(0, high=len(self.dps_Ierr[self.obs_data['Ibin']-1]))]
-			Verr[i] = self.dps_Verr[self.obs_data['Vbin']-1]['Verr'].values[np.random.randint(0, high=len(self.dps_Verr[self.obs_data['Vbin']-1]))]
+			Ierr[i] = self.dps_Ierr[self.obs_data['Ibin'].values[sample_list[i]]-1]['Ierr'].values[np.random.randint(0, high=len(self.dps_Ierr[self.obs_data['Ibin'].values[sample_list[i]]-1]))]
+			Verr[i] = self.dps_Verr[self.obs_data['Vbin'].values[sample_list[i]]-1]['Verr'].values[np.random.randint(0, high=len(self.dps_Verr[self.obs_data['Vbin'].values[sample_list[i]]-1]))]
 			#completeness test
-			if np.random.rand() > (self.completeness_V[self.obs_data['Vbin']-1]*self.completeness_I[self.obs_data['Ibin']-1]):
+			if np.random.rand() > (self.completeness_V[self.obs_data['Vbin'].values[sample_list[i]]-1]*self.completeness_I[self.obs_data['Ibin'].values[sample_list[i]]-1]):
 				Mask[i] == False
 		Vvega = self.obs_data['v'].values[sample_list] + Verr
 		Ivega = self.obs_data['i'].values[sample_list] + Ierr
 		VIvega = Vvega - Ivega
 		Vvega = Vvega[Mask]
-		VI_vega= VI_vega[Mask]
+		VIvega= VIvega[Mask]
 		data_resample = {'v':Vvega, 'vi':VIvega}
 		dp = pd.DataFrame(data=data_resample)
 		df_resample = dp[(dp['vi'] < (obs_vi_max)) & (dp['vi'] > (obs_vi_min))& (dp['v'] < (obs_v_max)) & (dp['v'] > (obs_v_min))]
@@ -264,6 +264,7 @@ class resample(utiles):
 		#read obs data
 		self.read_input(obs_data_path,photometry_path)
 		#run resample
+		self.chi2 = []
 		for k in range(start, end):
 			print("Starting {}th resample".format(k))
 			df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
@@ -287,5 +288,5 @@ class resample(utiles):
 			v_32 = np.float32(self.obs_data['v'].values)
 			bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
 			#calculate chi2
-			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
+			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
 		self.writeout(chi2_path,start,end)
