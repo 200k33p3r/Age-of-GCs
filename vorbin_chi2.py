@@ -49,9 +49,9 @@ class utiles:
 	#Divide the input data into three regions: MS, MSTO, and GB
 	#required two cuts from the main
 	def divide_data(self, df):
-		df_MS = df[df['v'] < self.MSTO_cut]
-		df_MSTO = df[(df['vi'] >= self.MSTO_cut) & (df['v'] <= self.GB_cut)]
-		df_GB = df[df['vi'] > self.GB_cut]
+		df_MS = df[df['v'] > self.MSTO_cut]
+		df_MSTO = df[(df['vi'] <= self.MSTO_cut) & (df['v'] >= self.GB_cut)]
+		df_GB = df[df['vi'] < self.GB_cut]
 		V_MS = df_MS['v'].values
 		VI_MS = df_MS['vi'].values
 		V_MSTO = df_MSTO['v'].values
@@ -197,19 +197,19 @@ class resample(utiles):
 		self.dps_Ierr = []
 		self.dps_Verr = []
 		for i in range(80):
-			self.dps_Ierr.append(pd.read_csv("{}\\Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
-			self.dps_Verr.append(pd.read_csv("{}\\Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			self.dps_Ierr.append(pd.read_csv("{}\\Ierr{:02d}.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
+			self.dps_Verr.append(pd.read_csv("{}\\Verr{:02d}.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
 
 	def resample(self,i,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
-		sample_list = np.random.randint(0,self.len_obs,size=self.sample_pt)
+		sample_list = np.random.randint(0,len(self.obs_data),size=self.sample_pt)
 		Ierr = np.zeros(self.sample_pt)
 		Verr = np.zeros(self.sample_pt)
 		#print(self.obs_data['Ibin'] - 1)
 		for i in range(self.sample_pt):
 			Ierr[i] = self.dps_Ierr[self.obs_data['Ibin']-1]['Ierr'].values[np.random.randint(0, high=len(self.dps_Ierr[self.obs_data['Ibin']-1]))]
 			Verr[i] = self.dps_Verr[self.obs_data['Vbin']-1]['Verr'].values[np.random.randint(0, high=len(self.dps_Verr[self.obs_data['Vbin']-1]))]
-		Vvega = self.obs_data['vv'].values[sample_list] + Verr
-		Ivega = self.obs_data['ii'].values[sample_list] + Ierr
+		Vvega = self.obs_data['v'].values[sample_list] + Verr
+		Ivega = self.obs_data['i'].values[sample_list] + Ierr
 		VIvega = Vvega - Ivega
 		data_resample = {'v':Vvega, 'vi':VIvega}
 		dp = pd.DataFrame(data=data_resample)
@@ -226,12 +226,12 @@ class resample(utiles):
 		dp.to_csv(path)
 
 
-	def __init__(self, GC_name, start, end, write_vorbin=False, Tb_size=30,write_cmd=False):
+	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=2000000):
 		#define boundaris
-		obs_vi_max = 0.721000016
-		obs_vi_min = 0.351000011
-		obs_v_max = 18.925
-		obs_v_min = 16.925
+		obs_vi_max = 0.791
+		obs_vi_min = 0.459
+		obs_v_max = 19.262
+		obs_v_min = 15.006
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#define all the path for read and write
 		obs_data_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\{}_fitstars.dat".format(GC_name,GC_name)
@@ -247,6 +247,10 @@ class resample(utiles):
 		self.check_directories(cmd_path)
 		#assign other global variables
 		self.Tb_size = Tb_size
+		self.sample_pt = sample_pt
+		#find both cuts from observational data
+		self.MSTO_cut = MSTO_cut
+		self.GB_cut = GB_cut
 		#read obs data
 		self.read_input(obs_data_path,photometry_path)
 		#run resample
