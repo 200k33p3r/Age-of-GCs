@@ -19,11 +19,11 @@ class utiles:
 		bin_num = np.argmin(np.square(xBar - x) + np.square(yBar - y), axis = 1)
 		return bin_num
 		
-	def writevorbin(self, xNode, yNode, bin_count_std, age, path):
+	def writevorbin(self, xNode, yNode, bin_count_std, mc_num, age, path):
 		#save the vorbin information
 		bin_loc = np.vstack((xNode,yNode,bin_count_std)).T
 		dp = pd.DataFrame(data=bin_loc, columns = ['xNode', 'yNode','bin_count_std'])
-		path = "{}/bin_mc{}.age{}".format(self.vorbin_path,self.mc_num,age)
+		path = "{}/bin_mc{}.age{}".format(path,mc_num,age)
 		dp.to_csv(path, index=False)
 	
 	def search_vorbin(self, xNode, yNode, total_pt, vi, v):
@@ -31,13 +31,13 @@ class utiles:
 		Tb_size = self.Tb_size
 		n_div = total_pt // Tb_size
 		for i in range(n_div):
-			bin_num = self.search_point_location_bc(vi[i*Tb_size:(i+1)*Tb_size].reshape(Tb_size,1), v[i*Tb_size:(i+1)*Tb_size].reshape(Tb_size,1), xNode, yNode)
+			bin_num = self.search_point_location_bc(v[i*Tb_size:(i+1)*Tb_size].reshape(Tb_size,1), vi[i*Tb_size:(i+1)*Tb_size].reshape(Tb_size,1), xNode, yNode)
 			for j in range(Tb_size):
 				bin_count[bin_num[j]] += 1
 		#do the last bit
 		len_last = total_pt - Tb_size * n_div
 		if len_last != 0:
-			bin_num = self.search_point_location_bc(vi[-len_last:].reshape(len_last,1), v[-len_last:].reshape(len_last,1), xNode, yNode)
+			bin_num = self.search_point_location_bc(v[-len_last:].reshape(len_last,1), vi[-len_last:].reshape(len_last,1), xNode, yNode)
 			for j in range(len_last):
 				bin_count[bin_num[j]] += 1
 		#to avoid divde by 0
@@ -129,10 +129,10 @@ class chi2(utiles):
 		v_32 = np.float32(df_cut['v'].values)
 		vi_32 = np.float32(df_cut['vi'].values*width_coeff)
 		#find standard bin count by search through all the theoretical data points
-		bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
+		bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
 		#write vorbin infor if desired
 		if write_vorbin == True:
-			self.writevorbin(XBar, YBar, bin_count_std, age)
+			self.writevorbin(XBar, YBar, bin_count_std, self.mc_num, age,self.vorbin_path)
 		#search through observed data
 		for dm in dms:
 			for red in reds:
@@ -140,7 +140,7 @@ class chi2(utiles):
 				obs_size = len(obs_cut)
 				vi_32 = np.float32((obs_cut['vi'].values - red)*width_coeff)
 				v_32 = np.float32(obs_cut['v'].values - dm)
-				bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
+				bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
 				#calculate chi2
 				chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
 		self.chi2 = chi2
@@ -175,6 +175,7 @@ class chi2(utiles):
 		#define all the path for read and write
 		obs_data_path = "/work2/08819/mying/{}/simulateCMD_ref/{}_fitstars.dat".format(GC_name,GC_name)
 		vorbin_path = "/work2/08819/mying/{}/vorbin".format(GC_name)
+		self.vorbin_path = vorbin_path
 		chi2_path = "/work2/08819/mying/{}/outchi2".format(GC_name)
 		cmd_path = "/work2/08819/mying/{}/simulateCMD/outcmd".format(GC_name)
 		#check those directories exist
@@ -204,7 +205,7 @@ class resample(utiles):
 			self.completeness_V.append(pd.read_csv("{}\\Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 			self.completeness_I.append(pd.read_csv("{}\\Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 
-	def resample(self,i,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
+	def resample(self,k,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
 		sample_list = np.random.randint(0,len(self.obs_data),size=self.sample_pt)
 		Ierr = np.zeros(self.sample_pt)
 		Verr = np.zeros(self.sample_pt)
@@ -225,7 +226,7 @@ class resample(utiles):
 		dp = pd.DataFrame(data=data_resample)
 		df_resample = dp[(dp['vi'] < (obs_vi_max)) & (dp['vi'] > (obs_vi_min))& (dp['v'] < (obs_v_max)) & (dp['v'] > (obs_v_min))]
 		if write_cmd == True:
-			path = "{}\\resample_{}".format(path,i)
+			path = "{}\\resample_{}".format(path,k)
 			df_resample.to_csv(path,index=False)
 		return df_resample
 
@@ -239,9 +240,9 @@ class resample(utiles):
 	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=2000000):
 		#define boundaris
 		obs_vi_max = 0.791
-		obs_vi_min = 0.459
-		obs_v_max = 19.262
-		obs_v_min = 15.006
+		obs_vi_min = 0.473
+		obs_v_max = 19.279
+		obs_v_min = 15.297
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#define all the path for read and write
 		obs_data_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\{}_fitstars_with_bins.dat".format(GC_name,GC_name)
@@ -277,16 +278,16 @@ class resample(utiles):
 			v_32 = np.float32(df['v'].values)
 			vi_32 = np.float32(df['vi'].values*width_coeff)
 			#find standard bin count by search through all the theoretical data points
-			bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
+			bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
 			if write_vorbin == True:
 				#no age for resample
 				age = 0
-				self.writevorbin(x_gen, y_gen, bin_count_std, age, vorbin_path)
+				self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
 			#fit observation data
 			obs_size = len(self.obs_data)
 			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
 			v_32 = np.float32(self.obs_data['v'].values)
-			bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
+			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
 			#calculate chi2
 			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
 		self.writeout(chi2_path,start,end)
