@@ -7,9 +7,15 @@
 # requires gs98getz to change [Fe/H] & [alpha/Fe]
 #
 
+#export LD_LIBRARY_PATH=/dartfs-hpc/admin/users/chaboyer/free_eos-2.2.1/intelbuild:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/dsep3/free_eos-2.2.1/intelbuild:$LD_LIBRARY_PATH
+#LD_LIBRARY_PATH=/dartfs-hpc/rc/home/v/f0056bv/intelbuild:$LD_LIBRARY_PATH
+#LD_LIBRARY_PATH=/afs/northstar/users/c/chaboyer/public/intelbuild:$LD_LIBRARY_PATH
 LD_LIBRARY_PATH=/dartfs-hpc/rc/home/f/f004qnf/dsep3/libs/free_eos-2.2.1/build/:$LD_LIBRARY_PATH
-
+# base directory; most other directories are below this
+#local=/dartfs-hpc/rc/home/v/f0056bv/dsep3
 local=/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/dsep3
+#local=/dartfs-hpc/rc/home/f/f004qnf/dsep3
 
 poly=$local/poly
 zams=$local/zams
@@ -25,8 +31,7 @@ bckur=$atm/atmk
 mcdir=/dartfs-hpc/rc/home/f/f004qnf/mcdir
 nml=$mcdir/nml
 prog=/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/dsep3/dsepX
-#use variable files Rowan generated
-vardir=/dartfs-hpc/rc/home/v/f0056bv/MC_var
+vardir=/dartfs-hpc/rc/home/f/f004qnf/MC_var
 rundir=/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/run
 
 #read from command line which run to do
@@ -52,13 +57,11 @@ echo "Output dir: $storeoutput"
 
 
 ID=GS98
-#generate mass from 0.2 to 3 solar mass
 Lmass=($(seq 200 40 690))
 MLmass=($(seq 700 50 1400))
 MHmass=($(seq 1500 100 2000))
 Hmass=($(seq 2000 200 3000))
 masses=( "${Lmass[@]}" "${MLmass[@]}" "${MHmass[@]}" "${Hmass[@]}" )
-ovshoot=0.0
 nmod=9999
 endage=1.8D10
 
@@ -66,7 +69,7 @@ runum=$1
 tmpfeh=${2#-}
 absfeh=`echo "$tmpfeh * 100" | bc`
 intfeh=${absfeh%.*}
-if (($tmpfeh > 0)); then
+if (($tmpfeh >= 0)); then
     varfile=$vardir/varfeh${intfeh}.$runum
 else
     varfile=$vardir/varfeh-${intfeh}.$runum
@@ -150,22 +153,29 @@ echo "mass = $mass"
 
 
     fname=m$mprefix.feh$intfeh.$runum
+    fnameiso=iso_m$mprefix.feh$intfeh.$runum
+
     ln -s $out/$fname fort.35
+    ln -s $out/$fnameiso fort.37
 
     echo "about to start DSEP"
     time $prog/dsepX
     gzip $out/$fname
+    gzip $out/$fnameiso
+
 #    mv $out/$fname.gz $storeoutput/.
  
-    rm fort.{11,12,13,35,19,20,22}
+    rm fort.{11,12,13,35,19,20,22,37}
  
 done
  
 cd $out
  
 tar -cf mcfeh$intfeh.$runum.tar m*.*.$runum.gz
+tar -cf iso_mcfeh$intfeh.$runum.tar iso_m*.*.$runum.gz
  
 mv mcfeh$intfeh.$runum.tar  $storeoutput/.
+mv iso_mcfeh$intfeh.$runum.tar  $storeoutput/.
  
 rm -rf $out
  
