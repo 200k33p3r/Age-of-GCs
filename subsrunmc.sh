@@ -81,7 +81,6 @@ getphysnml ()
 	rm physics.nml
     fi
     echo "\$PHYSICS " >physics.nml
-    echo " ALPHAC= $ovshoot" >>physics.nml
     if [[ $mass -lt 691 ]]; then
 	cat $nml/phys1.low.nml >>physics.nml
     elif [[ $mass -lt 1501 ]]; then
