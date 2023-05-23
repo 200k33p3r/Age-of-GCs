@@ -107,12 +107,6 @@ class chi2(utiles):
 	def main(self,write_vorbin,path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds):
 		#go through the search process
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
-		dm_max = 14.82
-		dm_min = 14.62
-		red_max = 0.05
-		red_min = 0.0
-		dms = np.linspace(dm_min,dm_max,21)
-		reds = np.linspace(red_min,red_max,6)
 		age = self.iso_age
 		chi2 = []
 		#read iso files
@@ -155,17 +149,17 @@ class chi2(utiles):
 
 	def __init__(self, GC_name, mc_num, iso_age, write_vorbin=False, Tb_size=30):
 		#define boundaris
-		obs_vi_max = 0.721000016
-		obs_vi_min = 0.351000011
-		obs_v_max = 18.9250000
-		obs_v_min = 16.9250000
+		obs_vi_max = 0.80
+		obs_vi_min = 0.44
+		obs_v_max = 19.28
+		obs_v_min = 15.28
 		#define distance modulus and reddening ranges
-		dm_max = 14.82
-		dm_min = 14.62
-		red_max = 0.05
-		red_min = 0.0
-		dm_num = 21
-		red_num = 6
+		dm_max = 13.90
+		dm_min = 13.60
+		red_max = 0.12
+		red_min = 0.00
+		dm_num = 31
+		red_num = 7
 		dms = np.linspace(dm_min,dm_max,dm_num)
 		reds = np.linspace(red_min,red_max,red_num)
 		#define other global variables
@@ -173,7 +167,7 @@ class chi2(utiles):
 		self.iso_age = str(iso_age)
 		self.Tb_size = Tb_size
 		#define all the path for read and write
-		obs_data_path = "/work2/08819/mying/{}/simulateCMD_ref/{}_fitstars.dat".format(GC_name,GC_name)
+		obs_data_path = "/work2/08819/mying/{}/simulateCMD/{}_fitstars.dat".format(GC_name,GC_name)
 		vorbin_path = "/work2/08819/mying/{}/vorbin".format(GC_name)
 		self.vorbin_path = vorbin_path
 		chi2_path = "/work2/08819/mying/{}/outchi2".format(GC_name)
