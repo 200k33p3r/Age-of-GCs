@@ -11,9 +11,9 @@ binaryfrac=$4
 numstars=$5
 cmdage=$6
 GC_name=$7
+feh=$8
 
 local=/work2/08819/mying/$GC_name/simulateCMD
-#inputiso=$local/inputiso
 inputiso=/work2/08819/mying/$GC_name/outiso
 out=$local/outcmd
 
@@ -52,19 +52,14 @@ gfortran MakeTestCMD.f90 define_errors.o random.o real_precision.o -o MakeTestCM
 
 
 #read from the command line which runs to do and simulation parameters
-if [ $# -ne 6 ]; then
-    echo "usage: SimulateCMD.sh 'first run' 'last run' 'PDMF slope' 'binary fraction' 'number simulated stars' 'cmdage'"
+if [ $# -ne 8 ]; then
+    echo "usage: SimulateCMD.sh 'first run' 'last run' 'PDMF slope' 'binary fraction' 'number simulated stars' 'cmdage' 'GC_names' 'feh'"
     exit 1
 fi 
 
-#if [[ -e fort.* ]]; then
-#    rm fort.*
-#fi
-
-
 for ((r=frun; r <= lrun; r++ )); do
-   echo "$inputiso/feh230cmd.$r    $pdmf"
-  time ./MakeTestCMD $inputiso/feh230cmd.$r  $pdmf $binaryfrac  $numstars $cmdage
+   echo "$inputiso/feh${feh}cmd.$r    $pdmf"
+  time ./MakeTestCMD $inputiso/feh${feh}cmd.$r  $pdmf $binaryfrac  $numstars $cmdage
   mv $tmp/mc$r.* $out/.
 done
 

@@ -48,10 +48,16 @@ class utiles:
 	
 	#Divide the input data into three regions: MS, MSTO, and GB
 	#required two cuts from the main
-	def divide_data(self, df):
-		df_MS = df[df['v'] > self.MSTO_cut]
-		df_MSTO = df[(df['vi'] <= self.MSTO_cut) & (df['v'] >= self.GB_cut)]
-		df_GB = df[df['vi'] < self.GB_cut]
+	def divide_data(self, df, read_track=False):
+		if read_track==False:
+			df_MS = df[df['v'] > self.MSTO_cut]
+			df_MSTO = df[(df['vi'] <= self.MSTO_cut) & (df['v'] >= self.GB_cut)]
+			df_GB = df[df['vi'] < self.GB_cut]
+		else:
+			MSTO_cut, GB_cut = read_track
+			df_MS = df[df['v'] > MSTO_cut]
+			df_MSTO = df[(df['vi'] <= MSTO_cut) & (df['v'] >= GB_cut)]
+			df_GB = df[df['vi'] < GB_cut]
 		V_MS = df_MS['v'].values
 		VI_MS = df_MS['vi'].values
 		V_MSTO = df_MSTO['v'].values
@@ -59,6 +65,41 @@ class utiles:
 		V_GB = df_GB['v'].values
 		VI_GB = df_GB['vi'].values
 		return V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB
+	
+	#find MSTO and GB eeps when using isochrones to generate vorbin
+	def find_two_eeps(self,path):
+		iso = open("{}/feh{}.{}".format(path,self.feh,self.mc_num), 'r')
+		len_file = len(iso.readlines())
+		iso.seek(0)
+		AGE_wanted = self.iso_age
+		if len_file < 10:
+			raise Exception("Empty file")
+		else:   
+			#skip header
+			iso.readline()
+			NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
+			print(AGE)
+			while int(AGE[:-1]) != AGE_wanted:
+				#skip header
+				iso.readline()
+				for i in range(int(NPTS[1:])):
+					#skiplines
+					iso.readline()
+				#skiplines
+				iso.readline()
+				iso.readline()
+				iso.readline()
+				NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
+				print(AGE)
+			#skip header
+			iso.readline()
+			for i in range(int(NPTS[1:])):
+				EEP,MASS,LogG,LogTeff,LogL,_,_,_,V,VI,F606W,F606WF814W = iso.readline().split()
+				if int(EEP[:3]) == 474:
+					MSTO_cut = float(F606W)
+				elif int(EEP[:3]) == 530:
+					GB_cut = float(F606W)
+					return MSTO_cut, GB_cut
 
 	#generate vorbin for three different regions in the CMD: MS, MSTO, and GB
 	#In default, we use 800 bins with 2:5:1 for three regions.
@@ -104,7 +145,7 @@ class chi2(utiles):
 		self.obs_data = pd.read_csv(path)
 		#self.obs_size = len(self.obs_data)
 
-	def main(self,write_vorbin,path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds):
+	def main(self,write_vorbin,path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds,iso_path):
 		#go through the search process
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		age = self.iso_age
@@ -112,10 +153,11 @@ class chi2(utiles):
 		#read iso files
 		dp = pd.read_csv("{}/mc{}.a{}".format(path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
 		#filter out data points that is out of boundary
-		df_cut = dp[(dp['vi'] < (obs_vi_max - red_max)) & (dp['vi'] > (obs_vi_min - red_min))& (dp['v'] < (obs_v_max - dm_max)) & (dp['v'] > (obs_v_min - dm_min))]
+		df_cut = dp[(dp['vi'] < (obs_vi_max - reds[-1])) & (dp['vi'] > (obs_vi_min - reds[0]))& (dp['v'] < (obs_v_max - dms[-1])) & (dp['v'] > (obs_v_min - dms[0]))]
 		total_pt = len(df_cut)
 		#generate vorbin use the first 100000 data points
-		V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df_cut)
+
+		V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df_cut,read_track=self.find_two_eeps(iso_path))
 		x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
 		#reduce memory usage for matrix operations
 		XBar = np.float32(x_gen)
@@ -130,7 +172,7 @@ class chi2(utiles):
 		#search through observed data
 		for dm in dms:
 			for red in reds:
-				obs_cut = self.obs_data[(self.obs_data['vi'] - red < (obs_vi_max - red_max)) & (self.obs_data['vi'] - red > (obs_vi_min - red_min))& (self.obs_data['v'] - dm < (obs_v_max - dm_max)) & (self.obs_data['v'] - dm > (obs_v_min - dm_min))]
+				obs_cut = self.obs_data[(self.obs_data['vi'] - red < (obs_vi_max - reds[-1])) & (self.obs_data['vi'] - red > (obs_vi_min - reds[0]))& (self.obs_data['v'] - dm < (obs_v_max - dms[-1])) & (self.obs_data['v'] - dm > (obs_v_min - dms[0]))]
 				obs_size = len(obs_cut)
 				vi_32 = np.float32((obs_cut['vi'].values - red)*width_coeff)
 				v_32 = np.float32(obs_cut['v'].values - dm)
@@ -166,20 +208,26 @@ class chi2(utiles):
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
 		self.Tb_size = Tb_size
+		if GC_name == 'M92':
+			self.feh = 230
+		elif GC_name == 'M55':
+			self.feh = 190
 		#define all the path for read and write
 		obs_data_path = "/work2/08819/mying/{}/simulateCMD/{}_fitstars.dat".format(GC_name,GC_name)
 		vorbin_path = "/work2/08819/mying/{}/vorbin".format(GC_name)
 		self.vorbin_path = vorbin_path
 		chi2_path = "/work2/08819/mying/{}/outchi2".format(GC_name)
 		cmd_path = "/work2/08819/mying/{}/simulateCMD/outcmd".format(GC_name)
+		iso_path = "/work2/08819/mying/{}/outiso".format(GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		self.check_directories(vorbin_path)
 		self.check_directories(chi2_path)
 		self.check_directories(cmd_path)
+		self.check_directories(iso_path)
 		#run code
 		self.read_input(obs_data_path)
-		self.main(write_vorbin,cmd_path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds)        
+		self.main(write_vorbin,cmd_path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds,iso_path)        
 		self.writeout(chi2_path)
 		print("done mc{}".format(self.mc_num))
 

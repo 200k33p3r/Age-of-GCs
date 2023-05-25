@@ -408,7 +408,7 @@ subroutine findFitPoints(VV,VI,niso,Vsgb,Isgb,indxmin,indxmax, fitindxmin,fitind
   real ::  Vsgb, Isgb
 
   real, parameter  :: sgbDeltaColour = 0.05  !difference in color between MSTO & SGB
-  real, parameter :: deltaMag = 1.0   !fit region is defined to be within +/-deltaMag of the SGB
+  real, parameter :: deltaMag = 2.0   !fit region is defined to be within +/-deltaMag of the SGB
   integer :: i,ito,nmax,locate
   real :: minVI,VIsgb,hitmag
 
