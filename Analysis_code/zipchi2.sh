@@ -32,5 +32,6 @@ for ((r=frun; r <= lrun; r++ )); do
     done
     
     tar -cf chi2_mc${r}.tar *${mc_prefix}${r}.gz
+    rm -rf *${mc_prefix}${r}.gz
     mv chi2_mc${r}.tar  $zipped_dir/.
 done
