@@ -5,7 +5,7 @@ import time
 
 class sCMD:
 	def CMD_gen(self):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', '0.02', '4000000', str(self.age), str(self.GC_name)])
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', '0.02', '4000000', str(self.age), str(self.GC_name),str(self.feh)])
 
 	def CMD_check(self):
 		check_time = 0
@@ -34,8 +34,13 @@ class sCMD:
 		#define global variables
 		self.outcmd_path = "/work2/08819/mying/{}/simulateCMD/outcmd".format(GC_name)
 		self.GC_name = str(GC_name)
+		if GC_name == 'M55':
+			self.feh=190
 		self.mc_num = str(mc_num)
-		self.age = str(age)
+		if float(age) < 10000:
+			self.age = '0'+str(age)
+		else:
+			self.age = str(age)
 		#time it
 		start_time = time.time()
 		#generate CMD

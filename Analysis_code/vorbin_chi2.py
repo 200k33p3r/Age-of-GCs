@@ -71,14 +71,13 @@ class utiles:
 		iso = open("{}/feh{}.{}".format(path,self.feh,self.mc_num), 'r')
 		len_file = len(iso.readlines())
 		iso.seek(0)
-		AGE_wanted = self.iso_age
+		AGE_wanted = np.float(self.iso_age)
 		if len_file < 10:
 			raise Exception("Empty file")
 		else:   
 			#skip header
 			iso.readline()
 			NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
-			print(AGE)
 			while int(AGE[:-1]) != AGE_wanted:
 				#skip header
 				iso.readline()
@@ -90,7 +89,6 @@ class utiles:
 				iso.readline()
 				iso.readline()
 				NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
-				print(AGE)
 			#skip header
 			iso.readline()
 			for i in range(int(NPTS[1:])):
@@ -198,12 +196,12 @@ class chi2(utiles):
 			obs_v_min = 15.296
 		#define distance modulus and reddening ranges
 		if GC_name == 'M55':
-			dm_max = 13.90
-			dm_min = 13.60
-			red_max = 0.12
+			dm_max = 14.00
+			dm_min = 13.50
+			red_max = 0.15
 			red_min = 0.00
-			dm_num = 31
-			red_num = 7
+			dm_num = 51
+			red_num = 16
 		dms = np.linspace(dm_min,dm_max,dm_num)
 		reds = np.linspace(red_min,red_max,red_num)
 		#define other global variables
