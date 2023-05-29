@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
+import subprocess
 
 class utiles:
 	def check_file(self,path):
@@ -280,6 +281,79 @@ class resample(utiles):
 
 
 	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=2000000):
+		#define boundaris
+		obs_vi_max = 0.791
+		obs_vi_min = 0.473
+		obs_v_max = 19.279
+		obs_v_min = 15.297
+		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
+		#define all the path for read and write
+		obs_data_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\{}_fitstars_with_bins.dat".format(GC_name,GC_name)
+		photometry_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\inputfiles".format(GC_name)
+		vorbin_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\vorbin".format(GC_name)
+		chi2_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\outchi2".format(GC_name)
+		cmd_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\cmd".format(GC_name)
+		#check those directories exist
+		self.check_file(obs_data_path)
+		self.check_file(photometry_path)
+		self.check_directories(vorbin_path)
+		self.check_directories(chi2_path)
+		self.check_directories(cmd_path)
+		#assign other global variables
+		self.Tb_size = Tb_size
+		self.sample_pt = sample_pt
+		#find both cuts from observational data
+		self.MSTO_cut = MSTO_cut
+		self.GB_cut = GB_cut
+		#read obs data
+		self.read_input(obs_data_path,photometry_path)
+		#run resample
+		self.chi2 = []
+		for k in range(start, end):
+			print("Starting {}th resample".format(k))
+			df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
+			total_pt = len(df)
+			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
+			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			#reduce memory usage for matrix operations
+			XBar = np.float32(x_gen)
+			YBar = np.float32(y_gen)
+			v_32 = np.float32(df['v'].values)
+			vi_32 = np.float32(df['vi'].values*width_coeff)
+			#find standard bin count by search through all the theoretical data points
+			bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
+			if write_vorbin == True:
+				#no age for resample
+				age = 0
+				self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
+			#fit observation data
+			obs_size = len(self.obs_data)
+			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
+			v_32 = np.float32(self.obs_data['v'].values)
+			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
+			#calculate chi2
+			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
+		self.writeout(chi2_path,start,end)
+
+#this is similar to resample class but utilizing the fiducial isochrone generated from fidanka
+class resample_fidanka(utiles):
+	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=2000000):
+		#define boundaris
+		if GC_name == 'M55':
+			obs_vi_max = 0.792
+			obs_vi_min = 0.462
+			obs_v_max = 19.28
+			obs_v_min = 15.296
+		#define distance modulus and reddening ranges
+		if GC_name == 'M55':
+			dm_max = 14.00
+			dm_min = 13.50
+			red_max = 0.15
+			red_min = 0.00
+			dm_num = 51
+			red_num = 16
+		dms = np.linspace(dm_min,dm_max,dm_num)
+		reds = np.linspace(red_min,red_max,red_num)
 		#define boundaris
 		obs_vi_max = 0.791
 		obs_vi_min = 0.473
