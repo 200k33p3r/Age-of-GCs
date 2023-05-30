@@ -143,7 +143,7 @@ class utiles:
 		return arr[-1], -1
 
 	#fine the empirical cdf from observational datapoints
-	def empirical_cdf(v):
+	def empirical_cdf(self,v):
 		v = np.sort(v)
 		len_v = len(v)
 		cdf = np.linspace(0,1,len_v)
@@ -377,7 +377,7 @@ class resample_fidanka(utiles):
 		self.ff = interp1d(self.V_fid, I_fid, bounds_error=False, fill_value='extrapolate')
 
 	#maginalized the completeness from the result of AS test. We assume the radius and magnitude are indepedent
-	def marginalize(self,v):
+	def marginalize(self):
 		self.completeness_V_marginalzied = []
 		self.completeness_I_marginalzied = []
 		self.completeness_R_marginalized = []
@@ -385,81 +385,106 @@ class resample_fidanka(utiles):
 		y = self.obs_data['y'] - self.OBS_center[1]
 		r = np.sqrt(x**2 + y**2)
 		r, r_cdf = self.empirical_cdf(r)
-		i = self.ff(v)
-		v, v_cdf = self.empirical_cdf(v)
-		i = self.ff(v)
-		i, i_cdf = self.empirical_cdf(i)
+
+		#find r bounds
+		i = 0
+		k = 0
+		idxs_r = []
+		while k < (len(r) - 1):
+			if (r[k+1] > self.Rad_bounds[i]) & (r[k] <= self.Rad_bounds[i]):
+				idxs_r.append(k+1)
+				i += 1
+				if i == (len(self.Rad_bounds) - 1):
+					break
+				k += 1
+			else:
+				k += 1
+		#in case it runs outside of the bound
+		if len(idxs_r) < len(self.Rad_bounds):
+			idxs_r.append(-1)
+
 		#do Vmag
 		for j in range(len(self.V_mag_bounds)):
 			maginalzied_prob = 0
-			i = 0
-			k = 0
-			idxs = []
-			while i < len(self.Rad_bounds):
-				while k < len(r) - 1:
-					if (r[k+1] > self.Rad_bounds[i]) & (r[k] <= self.Rad_bounds[i]):
-						idxs.append(k+1)
-						i += 1
-						k += 1
-					else:
-						k += 1
-			#in case it runs outside of the bound
-			if len(idxs) < len(self.Rad_bounds):
-				idxs.append(-1)
 			for i in range(len(self.Rad_bounds)):
 				if i==0:
-					maginalzied_prob += self.completeness_V[len(self.Rad_bounds)*j + i]*r_cdf[idxs[i]]
+					maginalzied_prob += self.completeness_V[len(self.Rad_bounds)*j + i]*r_cdf[idxs_r[i]]
 				else:
-					maginalzied_prob += self.completeness_V[len(self.Rad_bounds)*j + i]*(r_cdf[idxs[i]] - r_cdf[idxs[i-1]])
+					maginalzied_prob += self.completeness_V[len(self.Rad_bounds)*j + i]*(r_cdf[idxs_r[i]] - r_cdf[idxs_r[i-1]])
 			self.completeness_V_marginalzied.append(maginalzied_prob)
 
 		#do Imag
 		for j in range(len(self.I_mag_bounds)):
 			maginalzied_prob = 0
-			i = 0
-			k = 0
-			idxs = []
-			while i < len(self.Rad_bounds):
-				while k < len(r) - 1:
-					if (r[k+1] > self.Rad_bounds[i]) & (r[k] <= self.Rad_bounds[i]):
-						idxs.append(k+1)
-						i += 1
-						k += 1
-					else:
-						k += 1
-			#in case it runs outside of the bound
-			if len(idxs) < len(self.Rad_bounds):
-				idxs.append(-1)
 			for i in range(len(self.Rad_bounds)):
 				if i==0:
-					maginalzied_prob += self.completeness_I[len(self.Rad_bounds)*j + i]*r_cdf[idxs[i]]
+					maginalzied_prob += self.completeness_I[len(self.Rad_bounds)*j + i]*r_cdf[idxs_r[i]]
 				else:
-					maginalzied_prob += self.completeness_I[len(self.Rad_bounds)*j + i]*(r_cdf[idxs[i]] - r_cdf[idxs[i-1]])
+					maginalzied_prob += self.completeness_I[len(self.Rad_bounds)*j + i]*(r_cdf[idxs_r[i]] - r_cdf[idxs_r[i-1]])
 			self.completeness_I_marginalzied.append(maginalzied_prob)
-		#do r
+		return r, r_cdf
 
-		
+	#find the completeness with respect to radius from the AS test
+	def find_r_completness(self,as_test_path,pix_miss=0.5,mag_miss=0.75):
+		AS_test = pd.read_csv(as_test_path,sep='\s+',names=['x_in','y_in','v_in','i_in','x_out','y_out','v_out','i_out'],skiprows=1)
+		r_in = np.sqrt((AS_test['x_in'] - self.AS_center[0])**2 + (AS_test['y_in'] - self.AS_center[1])**2)
+		r_out = np.sqrt((AS_test['x_out'] - self.AS_center[0])**2 + (AS_test['y_out'] - self.AS_center[1])**2)
+		r_diff = np.abs(r_in - r_out)
+		v_diff = np.abs(AS_test['v_in'] - AS_test['v_out'])
+		i_diff = np.abs(AS_test['i_in'] - AS_test['i_out'])
+		input_num = np.zeros(len(self.Rad_bounds))
+		good_num = np.zeros(len(self.Rad_bounds))
+		for i in range(len(AS_test)):
+			j = 0
+			while j < (len(self.Rad_bounds)):
+				if r_in[i] < self.Rad_bounds[j]:
+					input_num[j] += 1
+					if (r_diff[i] < pix_miss) & (v_diff[i] < mag_miss) & (i_diff[i] < mag_miss):
+						good_num[j] += 1
+					j = np.inf
+				else:
+					j += 1
+		return good_num/input_num
+	 
 	#inferencing the real cdf from the observational data with completeness test
-	def cdf_inference(self,v):
-		len_v = len(v)
+	def cdf_inference_v(self,v):
 		v, cdf = self.empirical_cdf(v)
+		len_v = len(v)
 		i = self.ff(v)
 		cdf_new = np.zeros(len_v)
-		for i in range(len_v):
-			_, idx = self.find_fit_val(self.V_mag_bounds,v[i])
+		for j in range(len_v):
+			_, idx = self.find_fit_val(self.V_mag_bounds,v[j])
 			v_comp = self.completeness_V_marginalzied[idx]
-			_, idx = self.find_fit_val(self.I_mag_bounds,i[i])
+			_, idx = self.find_fit_val(self.I_mag_bounds,i[j])
 			i_comp = self.completeness_I_marginalzied[idx]
-			if i == 0:
+			if j == 0:
 				cdf_new[0] = cdf[0]/(v_comp*i_comp)
 			else:
-				cdf_new[i] = cdf_new[i-1] + (cdf[i] - cdf[i-1])/(v_comp*i_comp)
+				cdf_new[j] = cdf_new[j-1] + (cdf[j] - cdf[j-1])/(v_comp*i_comp)
 		cdf_new /= cdf_new[-1]
 		return v, cdf_new
 	
-	def get_cdf(self,cdf_path):
-		self.marginlize()
-		v, cdf_new = self.cdf_inference(self.obs_data['v'].values)
+	def get_cdf(self,cdf_path,as_test_path):
+		r, r_cdf = self.marginalize()
+		v, v_cdf_new = self.cdf_inference_v(self.obs_data['v'].values)
+		r_completeness = self.find_r_completness(as_test_path)
+		len_r = len(r)
+		r_cdf_new = np.zeros(len_r)
+		for i in range(len_r):
+			_, idx = self.find_fit_val(self.Rad_bounds,r[i])
+			r_comp = r_completeness[idx]
+			if i == 0:
+				r_cdf_new[0] = r_cdf[0]/r_comp
+			else:
+				r_cdf_new[i] = r_cdf_new[i-1] + (r_cdf[i] - r_cdf[i-1])/r_comp
+		r_cdf_new /= r_cdf_new[-1]
+		#write files
+		d_r = {'cdf': r_cdf_new, 'r': r}
+		d_v = {'cdf': v_cdf_new, 'v': v}
+		df = pd.DataFrame(data = d_r)
+		df.to_csv("{}/marginal_r.csv".format(cdf_path),index=False)
+		df = pd.DataFrame(data = d_v)
+		df.to_csv("{}/marginal_v.csv".format(cdf_path),index=False)
 
 	def resample(self, Binary_Fraction, sample_pt):
 		1
@@ -483,18 +508,23 @@ class resample_fidanka(utiles):
 		if GC_name == 'M55':
 			resample_path = '/media/sf_share/M55_data/resample'
 			data_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs/M55_data'
-		photometry_path = "{}/inputfiles".format(resample_path)
+			photometry_folder = '/home/mying/Desktop/GC_Ages/Age-of-GCs/Photometry'
+		photometry_path = "{}/M55_inputfiles".format(photometry_folder)
 		vorbin_path = "{}/vorbin".format(resample_path )
 		chi2_path = "{}/outchi2".format(resample_path)
 		cmd_path = "{}/cmd".format(resample_path )
 		obs_path = "{}/M55_fitstars.dat".format(data_path)
+		as_test_path = "{}/M55artstars.dat".format(data_path)
 		fiducial_path = "{}/fiducial_lines.csv".format(data_path)
+		cdf_path = "{}/cdf".format(resample_path)
 		#check those directories exist
 		self.check_file(photometry_path)
 		self.check_file(fiducial_path)
+		self.check_file(as_test_path)
 		self.check_directories(vorbin_path)
 		self.check_directories(chi2_path)
 		self.check_directories(cmd_path)
+		self.check_directories(cdf_path)
 		#assign other global variables
 		self.Tb_size = Tb_size
 		self.sample_pt = sample_pt
@@ -504,30 +534,34 @@ class resample_fidanka(utiles):
 			GB_cut = 18.0
 		#read obs data and photometry data
 		self.read_input(obs_path,photometry_path,fiducial_path)
-		#run resample
-		self.chi2 = []
-		for k in range(start, end):
-			print("Starting {}th resample".format(k))
-			df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
-			total_pt = len(df)
-			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
-			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
-			#reduce memory usage for matrix operations
-			XBar = np.float32(x_gen)
-			YBar = np.float32(y_gen)
-			v_32 = np.float32(df['v'].values)
-			vi_32 = np.float32(df['vi'].values*width_coeff)
-			#find standard bin count by search through all the theoretical data points
-			bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
-			if write_vorbin == True:
-				#no age for resample
-				age = 0
-				self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
-			#fit observation data
-			obs_size = len(self.obs_data)
-			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
-			v_32 = np.float32(self.obs_data['v'].values)
-			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
-			#calculate chi2
-			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
-		self.writeout(chi2_path,start,end)
+		#check if cdf files exits
+		if os.path.exists("{}/marginal_r.csv".format(cdf_path)) == False:
+			self.get_cdf(cdf_path,as_test_path)
+		print('Done writing cdf')
+		# #run resample
+		# self.chi2 = []
+		# for k in range(start, end):
+		# 	print("Starting {}th resample".format(k))
+		# 	df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
+		# 	total_pt = len(df)
+		# 	V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
+		# 	x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+		# 	#reduce memory usage for matrix operations
+		# 	XBar = np.float32(x_gen)
+		# 	YBar = np.float32(y_gen)
+		# 	v_32 = np.float32(df['v'].values)
+		# 	vi_32 = np.float32(df['vi'].values*width_coeff)
+		# 	#find standard bin count by search through all the theoretical data points
+		# 	bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
+		# 	if write_vorbin == True:
+		# 		#no age for resample
+		# 		age = 0
+		# 		self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
+		# 	#fit observation data
+		# 	obs_size = len(self.obs_data)
+		# 	vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
+		# 	v_32 = np.float32(self.obs_data['v'].values)
+		# 	bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
+		# 	#calculate chi2
+		# 	self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
+		# self.writeout(chi2_path,start,end)
