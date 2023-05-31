@@ -360,8 +360,12 @@ class resample_fidanka(utiles):
 		self.completeness_V = []
 		self.completeness_I = []
 		for i in range(80):
-			self.dps_Ierr.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
-			self.dps_Verr.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			dp_Ierr = pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr'])
+			dp_Verr = pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr'])
+			i_err, cdf = self.empirical_cdf(dp_Ierr['Ierr'].values)
+			self.dps_Ierr.append(interp1d(cdf, i_err, bounds_error=False, fill_value='extrapolate'))
+			v_err, cdf = self.empirical_cdf(dp_Verr['Verr'].values)
+			self.dps_Verr.append(interp1d(cdf, v_err, bounds_error=False, fill_value='extrapolate'))
 			self.completeness_V.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 			self.completeness_I.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 		df_V_bound = pd.read_csv("{}/VerrBoundary.dat".format(phot_path),sep='\s+',skiprows=3, names=['Rad', 'Mag', 'Nstar', 'Completness'])
@@ -486,8 +490,48 @@ class resample_fidanka(utiles):
 		df = pd.DataFrame(data = d_v)
 		df.to_csv("{}/marginal_v.csv".format(cdf_path),index=False)
 
+	#read in marginal files
+	def read_marginals(self, cdf_path):
+		df_v = pd.read_csv("{}/marginal_v.csv".format(cdf_path))
+		self.v_cdf = interp1d(df_v['cdf'].values, df_v['v'].values, bounds_error=False, fill_value='extrapolate')
+		df_r = pd.read_csv("{}/marginal_r.csv".format(cdf_path))
+		self.r_cdf = interp1d(df_r['cdf'].values, df_r['r'].values, bounds_error=False, fill_value='extrapolate')
+
 	def resample(self, Binary_Fraction, sample_pt):
-		1
+		#sample v magitude and calculate i from the fiducial isochrone
+		v_iso = self.v_cdf(np.random.rand(sample_pt))
+		i_iso = self.ff(v_iso)
+		#convert the magnitude to AS_test magnitude
+		v_iso -= self.V_diff
+		i_iso -= self.I_diff
+		#sample radius
+		r_iso = self.r_cdf(np.random.rand(sample_pt))
+		#make binaries (still working out how to make a binary)
+		Binary_num = round(sample_pt*Binary_Fraction)
+
+		#prepare the random number we need for completeness test and error
+		completeness_test_v = np.random.rand(sample_pt)
+		completeness_test_i = np.random.rand(sample_pt)
+		err_cdf_v = np.random.rand(sample_pt)
+		err_cdf_i = np.random.rand(sample_pt)
+		#define good_v and good_i
+		good_v = []
+		good_i = []
+		#shift sample points based on their corresponding completeness or error
+		num_v_bin = len(self.V_mag_bounds)
+		num_r_bin = len(self.Rad_bounds)
+		num_i_bin = num_v_bin
+		for i in range(sample_pt):
+			v_bin = self.find_fit_val(self.V_mag_bounds,v_iso[i])
+			r_bin = self.find_fit_val(self.Rad_bounds,r_iso[i])
+			if completeness_test_v[i] < self.completeness_V[r_bin*num_r_bin + v_bin]:
+				i_bin =  self.find_fit_val(self.I_mag_bounds,i_iso[i])
+				if completeness_test_i[i] < self.completeness_I[r_bin*num_r_bin + i_bin]:
+					good_v.append(v_iso[i] + self.dps_Verr[i](err_cdf_v[i]))
+					good_i.append(i_iso[i] + self.dps_Ierr[i](err_cdf_i[i]))
+		return good_v, good_i
+
+
 
 
 	def __init__(self, GC_name, start, end, Binary_Fraction = 0.02, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
