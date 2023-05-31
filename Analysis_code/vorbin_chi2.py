@@ -497,13 +497,17 @@ class resample_fidanka(utiles):
 		df_r = pd.read_csv("{}/marginal_r.csv".format(cdf_path))
 		self.r_cdf = interp1d(df_r['cdf'].values, df_r['r'].values, bounds_error=False, fill_value='extrapolate')
 
-	def resample(self, Binary_Fraction, sample_pt):
+	def resample(self, Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
 		#sample v magitude and calculate i from the fiducial isochrone
 		v_iso = self.v_cdf(np.random.rand(sample_pt))
 		i_iso = self.ff(v_iso)
 		#convert the magnitude to AS_test magnitude
 		v_iso -= self.V_diff
 		i_iso -= self.I_diff
+		v_min = obs_v_min - self.V_diff
+		v_max = obs_v_max - self.V_diff
+		vi_min = obs_vi_min - self.V_diff + self.I_diff
+		vi_max = obs_vi_max - self.V_diff + self.I_diff
 		#sample radius
 		r_iso = self.r_cdf(np.random.rand(sample_pt))
 		#make binaries (still working out how to make a binary)
@@ -516,7 +520,7 @@ class resample_fidanka(utiles):
 		err_cdf_i = np.random.rand(sample_pt)
 		#define good_v and good_i
 		good_v = []
-		good_i = []
+		good_vi = []
 		#shift sample points based on their corresponding completeness or error
 		num_v_bin = len(self.V_mag_bounds)
 		num_r_bin = len(self.Rad_bounds)
@@ -526,10 +530,22 @@ class resample_fidanka(utiles):
 			r_bin = self.find_fit_val(self.Rad_bounds,r_iso[i])
 			if completeness_test_v[i] < self.completeness_V[r_bin*num_r_bin + v_bin]:
 				i_bin =  self.find_fit_val(self.I_mag_bounds,i_iso[i])
+				#completeness test
 				if completeness_test_i[i] < self.completeness_I[r_bin*num_r_bin + i_bin]:
-					good_v.append(v_iso[i] + self.dps_Verr[i](err_cdf_v[i]))
-					good_i.append(i_iso[i] + self.dps_Ierr[i](err_cdf_i[i]))
-		return good_v, good_i
+					verr = self.dps_Verr[i](err_cdf_v[i])
+					ierr = self.dps_Ierr[i](err_cdf_i[i])
+					temp_v = v_iso[i] + verr
+					temp_i = i_iso[i] + ierr
+					temp_vi = temp_v - temp_i
+					#data cut test
+					if (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max):
+						good_v.append(temp_v)
+						good_vi.append(temp_vi)
+		#convert back to observational magnitude
+		good_v = np.array(good_v) + self.V_diff
+		good_vi = np.array(good_vi) + self.V_diff - self.I_diff
+		df = pd.DataFrame(data={'v':good_v, 'vi':good_vi})
+		return df
 
 
 
@@ -574,38 +590,38 @@ class resample_fidanka(utiles):
 		self.sample_pt = sample_pt
 		#find both cuts from observational data
 		if GC_name == 'M55':
-			MSTO_cut = 17.0
-			GB_cut = 18.0
+			self.MSTO_cut = 17.0
+			self.GB_cut = 18.0
 		#read obs data and photometry data
 		self.read_input(obs_path,photometry_path,fiducial_path)
 		#check if cdf files exits
 		if os.path.exists("{}/marginal_r.csv".format(cdf_path)) == False:
 			self.get_cdf(cdf_path,as_test_path)
 		print('Done writing cdf')
-		# #run resample
-		# self.chi2 = []
-		# for k in range(start, end):
-		# 	print("Starting {}th resample".format(k))
-		# 	df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
-		# 	total_pt = len(df)
-		# 	V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
-		# 	x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
-		# 	#reduce memory usage for matrix operations
-		# 	XBar = np.float32(x_gen)
-		# 	YBar = np.float32(y_gen)
-		# 	v_32 = np.float32(df['v'].values)
-		# 	vi_32 = np.float32(df['vi'].values*width_coeff)
-		# 	#find standard bin count by search through all the theoretical data points
-		# 	bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
-		# 	if write_vorbin == True:
-		# 		#no age for resample
-		# 		age = 0
-		# 		self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
-		# 	#fit observation data
-		# 	obs_size = len(self.obs_data)
-		# 	vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
-		# 	v_32 = np.float32(self.obs_data['v'].values)
-		# 	bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
-		# 	#calculate chi2
-		# 	self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
-		# self.writeout(chi2_path,start,end)
+		#run resample
+		self.chi2 = []
+		for k in range(start, end):
+			print("Starting {}th resample".format(k))
+			df = self.resample(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
+			total_pt = len(df)
+			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
+			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			#reduce memory usage for matrix operations
+			XBar = np.float32(x_gen)
+			YBar = np.float32(y_gen)
+			v_32 = np.float32(df['v'].values)
+			vi_32 = np.float32(df['vi'].values*width_coeff)
+			#find standard bin count by search through all the theoretical data points
+			bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
+			if write_vorbin == True:
+				#no age for resample
+				age = 0
+				self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
+			#fit observation data
+			obs_size = len(self.obs_data)
+			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
+			v_32 = np.float32(self.obs_data['v'].values)
+			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
+			#calculate chi2
+			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
+		self.writeout(chi2_path,start,end)
