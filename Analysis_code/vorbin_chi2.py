@@ -140,7 +140,7 @@ class utiles:
 		for idx in range(len(arr)):
 			if x < arr[idx]:
 				return arr[idx], idx
-		return arr[-1], -1
+		return arr[-1], idx
 
 	#fine the empirical cdf from observational datapoints
 	def empirical_cdf(self,v):
@@ -150,6 +150,12 @@ class utiles:
 		v,idx = np.unique(v, return_index=True)
 		cdf = cdf[idx]
 		return v, cdf
+	
+	def writeout_resample(self,path,start,end):
+		#write chi2 to csv file
+		dp = pd.DataFrame(data=self.chi2,columns=['i','chi2'])
+		path = "{}/resample_chi2_{}_to_{}".format(path,start,end)
+		dp.to_csv(path)
 
 class chi2(utiles):
 
@@ -287,12 +293,6 @@ class resample(utiles):
 			df_resample.to_csv(path,index=False)
 		return df_resample
 
-	def writeout(self,path,start,end):
-		#write chi2 to csv file
-		dp = pd.DataFrame(data=self.chi2,columns=['i','chi2'])
-		path = "{}\\resample_chi2_{}_to_{}".format(path,start,end)
-		dp.to_csv(path)
-
 
 	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=2000000):
 		#define boundaris
@@ -347,7 +347,7 @@ class resample(utiles):
 			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
 			#calculate chi2
 			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
-		self.writeout(chi2_path,start,end)
+		self.writeout_resample(chi2_path,start,end)
 
 #this is similar to resample class but utilizing the fiducial isochrone generated from fidanka
 class resample_fidanka(utiles):
@@ -497,7 +497,7 @@ class resample_fidanka(utiles):
 		df_r = pd.read_csv("{}/marginal_r.csv".format(cdf_path))
 		self.r_cdf = interp1d(df_r['cdf'].values, df_r['r'].values, bounds_error=False, fill_value='extrapolate')
 
-	def resample(self, Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
+	def resample(self, Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k):
 		#sample v magitude and calculate i from the fiducial isochrone
 		v_iso = self.v_cdf(np.random.rand(sample_pt))
 		i_iso = self.ff(v_iso)
@@ -526,14 +526,14 @@ class resample_fidanka(utiles):
 		num_r_bin = len(self.Rad_bounds)
 		num_i_bin = num_v_bin
 		for i in range(sample_pt):
-			v_bin = self.find_fit_val(self.V_mag_bounds,v_iso[i])
-			r_bin = self.find_fit_val(self.Rad_bounds,r_iso[i])
-			if completeness_test_v[i] < self.completeness_V[r_bin*num_r_bin + v_bin]:
-				i_bin =  self.find_fit_val(self.I_mag_bounds,i_iso[i])
+			_, v_bin = self.find_fit_val(self.V_mag_bounds,v_iso[i])
+			_, r_bin = self.find_fit_val(self.Rad_bounds,r_iso[i])
+			if completeness_test_v[i] < self.completeness_V[v_bin*num_r_bin + r_bin]:
+				_, i_bin =  self.find_fit_val(self.I_mag_bounds,i_iso[i])
 				#completeness test
-				if completeness_test_i[i] < self.completeness_I[r_bin*num_r_bin + i_bin]:
-					verr = self.dps_Verr[i](err_cdf_v[i])
-					ierr = self.dps_Ierr[i](err_cdf_i[i])
+				if completeness_test_i[i] < self.completeness_I[i_bin*num_r_bin + r_bin]:
+					verr = self.dps_Verr[v_bin*num_r_bin + r_bin](err_cdf_v[i])
+					ierr = self.dps_Ierr[i_bin*num_r_bin + r_bin](err_cdf_i[i])
 					temp_v = v_iso[i] + verr
 					temp_i = i_iso[i] + ierr
 					temp_vi = temp_v - temp_i
@@ -545,6 +545,7 @@ class resample_fidanka(utiles):
 		good_v = np.array(good_v) + self.V_diff
 		good_vi = np.array(good_vi) + self.V_diff - self.I_diff
 		df = pd.DataFrame(data={'v':good_v, 'vi':good_vi})
+		print("Done generating sCMD for {}, get {} of points".format(k,len(df)))
 		return df
 
 
@@ -597,12 +598,14 @@ class resample_fidanka(utiles):
 		#check if cdf files exits
 		if os.path.exists("{}/marginal_r.csv".format(cdf_path)) == False:
 			self.get_cdf(cdf_path,as_test_path)
-		print('Done writing cdf')
+			print('Done writing cdf')
+		#read cdf files
+		self.read_marginals(cdf_path)
 		#run resample
 		self.chi2 = []
 		for k in range(start, end):
 			print("Starting {}th resample".format(k))
-			df = self.resample(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
+			df = self.resample(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k)
 			total_pt = len(df)
 			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
 			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
@@ -624,4 +627,4 @@ class resample_fidanka(utiles):
 			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
 			#calculate chi2
 			self.chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
-		self.writeout(chi2_path,start,end)
+		self.writeout_resample(chi2_path,start,end)
