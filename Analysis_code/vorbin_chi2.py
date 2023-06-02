@@ -368,6 +368,10 @@ class resample_fidanka(utiles):
 			self.dps_Verr.append(interp1d(cdf, v_err, bounds_error=False, fill_value='extrapolate'))
 			self.completeness_V.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 			self.completeness_I.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+		self.completeness_V = np.array(self.completeness_V)
+		self.completeness_I = np.array(self.completeness_I)
+		self.dps_Verr = np.array(self.dps_Verr)
+		self.dps_Ierr = np.array(self.dps_Ierr)
 		df_V_bound = pd.read_csv("{}/VerrBoundary.dat".format(phot_path),sep='\s+',skiprows=3, names=['Rad', 'Mag', 'Nstar', 'Completness'])
 		self.Rad_bounds = np.sort(np.unique(df_V_bound['Rad'].values))
 		self.V_mag_bounds = np.sort(np.unique(df_V_bound['Mag'].values))
@@ -525,22 +529,41 @@ class resample_fidanka(utiles):
 		num_v_bin = len(self.V_mag_bounds)
 		num_r_bin = len(self.Rad_bounds)
 		num_i_bin = num_v_bin
-		for i in range(sample_pt):
-			_, v_bin = self.find_fit_val(self.V_mag_bounds,v_iso[i])
-			_, r_bin = self.find_fit_val(self.Rad_bounds,r_iso[i])
-			if completeness_test_v[i] < self.completeness_V[v_bin*num_r_bin + r_bin]:
-				_, i_bin =  self.find_fit_val(self.I_mag_bounds,i_iso[i])
-				#completeness test
-				if completeness_test_i[i] < self.completeness_I[i_bin*num_r_bin + r_bin]:
-					verr = self.dps_Verr[v_bin*num_r_bin + r_bin](err_cdf_v[i])
-					ierr = self.dps_Ierr[i_bin*num_r_bin + r_bin](err_cdf_i[i])
-					temp_v = v_iso[i] + verr
-					temp_i = i_iso[i] + ierr
-					temp_vi = temp_v - temp_i
-					#data cut test
-					if (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max):
-						good_v.append(temp_v)
-						good_vi.append(temp_vi)
+		v_bin = np.clip(np.searchsorted(self.V_mag_bounds, v_iso, side='left'),0,len(self.V_mag_bounds) - 1)
+		r_bin = np.clip(np.searchsorted(self.Rad_bounds, r_iso, side='left'),0,len(self.Rad_bounds) - 1)
+		i_bin = np.clip(np.searchsorted(self.I_mag_bounds, i_iso, side='left'),0,len(self.I_mag_bounds) - 1)
+		#completenes test results
+		v_bin_full = v_bin*num_r_bin + r_bin
+		i_bin_full = i_bin*num_r_bin + r_bin
+		v_result = completeness_test_v < self.completeness_V[v_bin_full]
+		i_result = completeness_test_i < self.completeness_I[i_bin_full]
+		#shift the point by error from AS test
+		verr = np.zeros(sample_pt)
+		ierr = np.zeros(sample_pt)
+		for i in range(len(self.dps_Verr)):
+			mask = v_bin_full == i
+			verr[mask] = self.dps_Verr[i](err_cdf_v[mask])
+			mask = i_bin_full == i
+			ierr[mask] = self.dps_Ierr[i](err_cdf_i[mask])
+		temp_v = v_iso + verr
+		temp_i = i_iso + ierr
+		temp_vi = temp_v - temp_i
+		#combine all conditions
+		All_tests = (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
+		#select points satisfied all conditions
+		good_v = temp_v[All_tests]
+		good_vi = temp_vi[All_tests]
+		# for i in range(sample_pt):
+		# 	if v_result[i] & i_result[i]:
+		# 		verr = self.dps_Verr[v_bin*num_r_bin + r_bin](err_cdf_v[i])
+		# 		ierr = self.dps_Ierr[i_bin*num_r_bin + r_bin](err_cdf_i[i])
+		# 		temp_v = v_iso[i] + verr
+		# 		temp_i = i_iso[i] + ierr
+		# 		temp_vi = temp_v - temp_i
+		# 		#data cut test
+		# 		if (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max):
+		# 			good_v.append(temp_v)
+		# 			good_vi.append(temp_vi)
 		#convert back to observational magnitude
 		good_v = np.array(good_v) + self.V_diff
 		good_vi = np.array(good_vi) + self.V_diff - self.I_diff
