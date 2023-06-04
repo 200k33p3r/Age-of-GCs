@@ -263,10 +263,10 @@ class resample(utiles):
 		self.completeness_V = []
 		self.completeness_I = []
 		for i in range(80):
-			self.dps_Ierr.append(pd.read_csv("{}\\Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
-			self.dps_Verr.append(pd.read_csv("{}\\Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
-			self.completeness_V.append(pd.read_csv("{}\\Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
-			self.completeness_I.append(pd.read_csv("{}\\Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+			self.dps_Ierr.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
+			self.dps_Verr.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			self.completeness_V.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+			self.completeness_I.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 
 	def resample(self,k,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
 		sample_list = np.random.randint(0,len(self.obs_data),size=self.sample_pt)
@@ -289,24 +289,32 @@ class resample(utiles):
 		dp = pd.DataFrame(data=data_resample)
 		df_resample = dp[(dp['vi'] < (obs_vi_max)) & (dp['vi'] > (obs_vi_min))& (dp['v'] < (obs_v_max)) & (dp['v'] > (obs_v_min))]
 		if write_cmd == True:
-			path = "{}\\resample_{}".format(path,k)
+			path = "{}/resample_{}".format(path,k)
 			df_resample.to_csv(path,index=False)
 		return df_resample
 
 
-	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=2000000):
+	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
 		#define boundaris
-		obs_vi_max = 0.791
-		obs_vi_min = 0.473
-		obs_v_max = 19.279
-		obs_v_min = 15.297
+		if GC_name == 'M55':
+			obs_vi_max = 0.792
+			obs_vi_min = 0.462
+			obs_v_max = 19.28
+			obs_v_min = 15.296
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#define all the path for read and write
-		obs_data_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\{}_fitstars_with_bins.dat".format(GC_name,GC_name)
-		photometry_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\inputfiles".format(GC_name)
-		vorbin_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\vorbin".format(GC_name)
-		chi2_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\outchi2".format(GC_name)
-		cmd_path = "C:\\Users\\marti\\Desktop\\school work\\Dartmouth\\GC_ages\\{}\\resample\\cmd".format(GC_name)
+		if GC_name == 'M55':
+			# repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
+			# resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
+			repo_path = '/home/mying/Desktop/Repositories/Age-of-GCs'
+			resample_path = "/home/mying/Desktop/{}_data/resample".format(GC_name)
+		data_path = "{}/{}_data".format(repo_path, GC_name)
+		photometry_folder = "{}/Photometry".format(repo_path)
+		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
+		vorbin_path = "{}/vorbin".format(resample_path )
+		chi2_path = "{}/outchi2".format(resample_path)
+		cmd_path = "{}/cmd".format(resample_path )
+		obs_data_path = "{}/{}_fitstars_with_bins.dat".format(data_path,GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		self.check_file(photometry_path)
@@ -597,7 +605,7 @@ class resample_fidanka(utiles):
 			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
 			#calculate chi2
 			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
-		self.writeout_resample(chi2_path,start,end)
+		self.writeout_resample(chi2_path,start,end,chi2)
 
 
 
@@ -617,15 +625,18 @@ class resample_fidanka(utiles):
 			self.I_diff = self.V_diff-0.737
 		#define all the path for read and write
 		if GC_name == 'M55':
-			resample_path = '/media/sf_share/M55_data/resample'
-			data_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs/M55_data'
-			photometry_folder = '/home/mying/Desktop/GC_Ages/Age-of-GCs/Photometry'
-		photometry_path = "{}/M55_inputfiles".format(photometry_folder)
+			# repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
+			# resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
+			repo_path = '/home/mying/Desktop/Repositories/Age-of-GCs'
+			resample_path = "/home/mying/Desktop/{}_data/resample".format(GC_name)
+		data_path = "{}/{}_data".format(repo_path, GC_name)
+		photometry_folder = "{}/Photometry".format(repo_path)
+		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
 		vorbin_path = "{}/vorbin".format(resample_path )
 		chi2_path = "{}/outchi2".format(resample_path)
 		cmd_path = "{}/cmd".format(resample_path )
-		obs_path = "{}/M55_fitstars.dat".format(data_path)
-		as_test_path = "{}/M55artstars.dat".format(data_path)
+		obs_path = "{}/{}_fitstars.dat".format(data_path,GC_name)
+		as_test_path = "{}/{}artstars.dat".format(data_path,GC_name)
 		fiducial_path = "{}/fiducial_lines.csv".format(data_path)
 		cdf_path = "{}/cdf".format(resample_path)
 		#check those directories exist
