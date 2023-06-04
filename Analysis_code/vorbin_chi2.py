@@ -155,7 +155,7 @@ class utiles:
 		#write chi2 to csv file
 		dp = pd.DataFrame(data=chi2,columns=['i','chi2'])
 		path = "{}/resample_chi2_{}_to_{}".format(path,start,end)
-		dp.to_csv(path)
+		dp.to_csv(path,index=False)
 
 class chi2(utiles):
 
@@ -509,10 +509,31 @@ class resample_fidanka(utiles):
 		df_r = pd.read_csv("{}/marginal_r.csv".format(cdf_path))
 		self.r_cdf = interp1d(df_r['cdf'].values, df_r['r'].values, bounds_error=False, fill_value='extrapolate')
 
-	def resample(self, Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k):
+	def resample(self, Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k,cmd_path,write_cmd):
 		#sample v magitude and calculate i from the fiducial isochrone
 		v_iso = self.v_cdf(np.random.rand(sample_pt))
 		i_iso = self.ff(v_iso)
+		#sample radius
+		r_iso = self.r_cdf(np.random.rand(sample_pt))
+		#test generating binary from random sampling the fiducial isochrone
+		#make binaries (still working out how to make a binary)
+		# Binary_num = round(sample_pt*Binary_Fraction)
+		# v_binary = []
+		# i_binary = []
+		# for i in range(Binary_num):
+		# 	v_sec = self.v_cdf(np.random.rand())
+		# 	while v_sec < v_iso[i]:
+		# 		v_sec = self.v_cdf(np.random.rand())
+		# 	v_binary.append(v_sec)
+		# 	i_binary.append(self.ff(v_sec))
+		# v_binary = np.array(v_binary)
+		# i_binary = np.array(i_binary)
+		# # v_binary = self.v_cdf(np.random.rand(Binary_num))
+		# # i_binary = self.ff(v_binary)
+		# # v_binary -= self.V_diff
+		# # i_binary -= self.I_diff
+		# v_iso[:Binary_num] = -2.5*np.log10(np.power(10,-0.4*v_iso[:Binary_num]) + np.power(10,-0.4*v_binary))
+		# i_iso[:Binary_num] = -2.5*np.log10(np.power(10,-0.4*i_iso[:Binary_num]) + np.power(10,-0.4*i_binary))
 		#convert the magnitude to AS_test magnitude
 		v_iso -= self.V_diff
 		i_iso -= self.I_diff
@@ -520,23 +541,14 @@ class resample_fidanka(utiles):
 		v_max = obs_v_max - self.V_diff
 		vi_min = obs_vi_min - self.V_diff + self.I_diff
 		vi_max = obs_vi_max - self.V_diff + self.I_diff
-		#sample radius
-		r_iso = self.r_cdf(np.random.rand(sample_pt))
-		#make binaries (still working out how to make a binary)
-		Binary_num = round(sample_pt*Binary_Fraction)
-
 		#prepare the random number we need for completeness test and error
 		completeness_test_v = np.random.rand(sample_pt)
 		completeness_test_i = np.random.rand(sample_pt)
 		err_cdf_v = np.random.rand(sample_pt)
 		err_cdf_i = np.random.rand(sample_pt)
-		#define good_v and good_i
-		good_v = []
-		good_vi = []
 		#shift sample points based on their corresponding completeness or error
 		num_v_bin = len(self.V_mag_bounds)
 		num_r_bin = len(self.Rad_bounds)
-		num_i_bin = num_v_bin
 		v_bin = np.clip(np.searchsorted(self.V_mag_bounds, v_iso, side='left'),0,len(self.V_mag_bounds) - 1)
 		r_bin = np.clip(np.searchsorted(self.Rad_bounds, r_iso, side='left'),0,len(self.Rad_bounds) - 1)
 		i_bin = np.clip(np.searchsorted(self.I_mag_bounds, i_iso, side='left'),0,len(self.I_mag_bounds) - 1)
@@ -557,7 +569,7 @@ class resample_fidanka(utiles):
 		temp_i = i_iso + ierr
 		temp_vi = temp_v - temp_i
 		#combine all conditions
-		All_tests = (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
+		All_tests = (np.abs(ierr) < 0.08) & (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
 		#select points satisfied all conditions
 		good_v = temp_v[All_tests]
 		good_vi = temp_vi[All_tests]
@@ -577,13 +589,16 @@ class resample_fidanka(utiles):
 		good_vi = np.array(good_vi) + self.V_diff - self.I_diff
 		df = pd.DataFrame(data={'v':good_v, 'vi':good_vi})
 		print("Done generating sCMD for {}, get {} of points".format(k,len(df)))
+		if write_cmd == True:
+			path = "{}/resample_{}".format(cmd_path,k)
+			df.to_csv(path,index=False)
 		return df
 
-	def calculate_chi2(self,Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path,start, end, write_vorbin):
+	def calculate_chi2(self,Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path,start, end, write_vorbin,cmd_path,write_cmd):
 		chi2 = []
 		for k in range(start, end):
 			print("Starting {}th resample".format(k))
-			df = self.resample(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k)
+			df = self.resample(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k,cmd_path,write_cmd)
 			total_pt = len(df)
 			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
 			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
@@ -664,7 +679,7 @@ class resample_fidanka(utiles):
 		self.read_marginals(cdf_path)
 		#run resample
 		if pool == False: 
-			self.calculate_chi2(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start, end, write_vorbin)
+			self.calculate_chi2(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start, end, write_vorbin,cmd_path,write_cmd)
 		else:
 			from multiprocessing import Pool
 			MP_pool = Pool(pool)
@@ -673,7 +688,7 @@ class resample_fidanka(utiles):
 			batch_num = total_resample/10
 			i = 0
 			while i < batch_num:
-				paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start + i*10, start + (i+1)*10, write_vorbin))
+				paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start + i*10, start + (i+1)*10, write_vorbin,cmd_path,write_cmd))
 				i += 1
-			paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start + (i-1)*10, end, write_vorbin))
+			paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start + (i-1)*10, end, write_vorbin,cmd_path,write_cmd))
 			MP_pool.starmap(self.calculate_chi2, paramlist)
