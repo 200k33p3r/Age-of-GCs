@@ -6,6 +6,7 @@ import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 import subprocess
 from scipy.interpolate import interp1d
+import abcpy
 
 class utiles:
 	def check_file(self,path):
