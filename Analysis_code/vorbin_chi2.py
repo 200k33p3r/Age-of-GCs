@@ -58,8 +58,8 @@ class utiles:
 		else:
 			MSTO_cut, GB_cut = read_track
 			df_MS = df[df['v'] > MSTO_cut]
-			df_MSTO = df[(df['vi'] <= MSTO_cut) & (df['v'] >= GB_cut)]
-			df_GB = df[df['vi'] < GB_cut]
+			df_MSTO = df[(df['v'] <= MSTO_cut) & (df['v'] >= GB_cut)]
+			df_GB = df[df['v'] < GB_cut]
 		V_MS = df_MS['v'].values
 		VI_MS = df_MS['vi'].values
 		V_MSTO = df_MSTO['v'].values
@@ -169,7 +169,7 @@ class chi2(utiles):
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		age = self.iso_age
 		chi2 = []
-		#read iso files
+		#read cmd files
 		dp = pd.read_csv("{}/mc{}.a{}".format(path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
 		#filter out data points that is out of boundary
 		df_cut = dp[(dp['vi'] < (obs_vi_max - reds[-1])) & (dp['vi'] > (obs_vi_min - reds[0]))& (dp['v'] < (obs_v_max - dms[-1])) & (dp['v'] > (obs_v_min - dms[0]))]
