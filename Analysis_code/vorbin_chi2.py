@@ -6,6 +6,12 @@ import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 import subprocess
 from scipy.interpolate import interp1d
+from bayes_opt import BayesianOptimization
+
+#force the code to run on 1core as serial jobs on Stampede2
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
 
 class utiles:
 	def check_file(self,path):
@@ -61,11 +67,11 @@ class utiles:
 			df_MSTO = df[(df['v'] <= MSTO_cut) & (df['v'] >= GB_cut)]
 			df_GB = df[df['v'] < GB_cut]
 		V_MS = df_MS['v'].values
-		VI_MS = df_MS['vi'].values
+		VI_MS = df_MS['vi'].values*self.width_coeff
 		V_MSTO = df_MSTO['v'].values
-		VI_MSTO = df_MSTO['vi'].values
+		VI_MSTO = df_MSTO['vi'].values*self.width_coeff
 		V_GB = df_GB['v'].values
-		VI_GB = df_GB['vi'].values
+		VI_GB = df_GB['vi'].values*self.width_coeff
 		return V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB
 	
 	#find MSTO and GB eeps when using isochrones to generate vorbin
@@ -156,7 +162,18 @@ class utiles:
 		dp = pd.DataFrame(data=chi2,columns=['i','chi2'])
 		path = "{}/resample_chi2_{}_to_{}".format(path,start,end)
 		dp.to_csv(path,index=False)
+	
+	#trim down the obseravtional data to the fiting region
+	def obs_cut(self, dm, red):
+		return self.obs_data[(self.obs_data['vi'] - red < (self.obs_vi_max)) & (self.obs_data['vi'] - red > (self.obs_vi_min))& (self.obs_data['v'] - dm < (self.obs_v_max)) & (self.obs_data['v'] - dm > (self.obs_v_min))]
 
+	#find chi2/df
+	def dm_red_search(self, dm, red):
+		new_obs = self.obs_cut(dm, red)
+		obs_size = len(new_obs)
+		bin_count = self.search_vorbin(self.XBar, self.YBar, obs_size, (new_obs['vi'].values - red)*self.width_coeff, new_obs['v'].values - dm)
+		return -(np.inner(np.divide(bin_count,self.bin_count_std/(self.total_pt/obs_size)) - 1, bin_count - self.bin_count_std/(self.total_pt/obs_size)))/(obs_size - 22)
+	
 class chi2(utiles):
 
 	def read_input(self,path):
@@ -164,41 +181,64 @@ class chi2(utiles):
 		self.obs_data = pd.read_csv(path)
 		#self.obs_size = len(self.obs_data)
 
-	def main(self,write_vorbin,path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds,iso_path):
-		#go through the search process
-		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
+	def main(self,write_vorbin,path, dm_max, dm_min, red_max, red_min, iso_path,chi2_path,write_chi2_log=False):
 		age = self.iso_age
-		chi2 = []
 		#read cmd files
-		dp = pd.read_csv("{}/mc{}.a{}".format(path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
-		#filter out data points that is out of boundary
-		df_cut = dp[(dp['vi'] < (obs_vi_max - reds[-1])) & (dp['vi'] > (obs_vi_min - reds[0]))& (dp['v'] < (obs_v_max - dms[-1])) & (dp['v'] > (obs_v_min - dms[0]))]
-		total_pt = len(df_cut)
+		cmd = pd.read_csv("{}/mc{}.a{}".format(path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
+		#go through the search process
+		self.obs_vi_max = max(cmd['vi'].values)
+		self.obs_vi_min = min(cmd['vi'].values)
+		self.obs_v_max = max(cmd['v'].values)
+		self.obs_v_min = min(cmd['v'].values)
+		self.width_coeff = (self.obs_v_max - self.obs_v_min)/(self.obs_vi_max - self.obs_vi_min)
 		#generate vorbin use the first 100000 data points
-
-		V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df_cut,read_track=self.find_two_eeps(iso_path))
+		V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
 		x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
 		#reduce memory usage for matrix operations
-		XBar = np.float32(x_gen)
-		YBar = np.float32(y_gen)
-		v_32 = np.float32(df_cut['v'].values)
-		vi_32 = np.float32(df_cut['vi'].values*width_coeff)
+		self.XBar = np.float32(x_gen)
+		self.YBar = np.float32(y_gen)
+		v_32 = np.float32(cmd['v'].values)
+		vi_32 = np.float32(cmd['vi'].values*self.width_coeff)
 		#find standard bin count by search through all the theoretical data points
-		bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
+		self.total_pt = len(cmd)
+		self.bin_count_std = self.search_vorbin(self.XBar, self.YBar, self.total_pt, vi_32, v_32)
 		#write vorbin infor if desired
 		if write_vorbin == True:
-			self.writevorbin(XBar, YBar, bin_count_std, self.mc_num, age,self.vorbin_path)
+			self.writevorbin(self.XBar, self.YBar, self.bin_count_std, self.mc_num, age,self.vorbin_path)
 		#search through observed data
-		for dm in dms:
-			for red in reds:
-				obs_cut = self.obs_data[(self.obs_data['vi'] - red < (obs_vi_max - reds[-1])) & (self.obs_data['vi'] - red > (obs_vi_min - reds[0]))& (self.obs_data['v'] - dm < (obs_v_max - dms[-1])) & (self.obs_data['v'] - dm > (obs_v_min - dms[0]))]
-				obs_size = len(obs_cut)
-				vi_32 = np.float32((obs_cut['vi'].values - red)*width_coeff)
-				v_32 = np.float32(obs_cut['v'].values - dm)
-				bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
-				#calculate chi2
-				chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
-		self.chi2 = chi2
+		#Utilize Bayesian optimization method to find the best fit DM and red value
+		# Bounded region of parameter space
+		pbounds = {'dm': (dm_min, dm_max), 'red': (red_min, red_max)}
+
+		optimizer = BayesianOptimization(
+			f=self.dm_red_search,
+			pbounds=pbounds,
+			random_state=1,
+			verbose=0,
+		)
+
+		if write_chi2_log == True:
+			from bayes_opt.logger import JSONLogger
+			from bayes_opt.event import Events
+			logger = JSONLogger(path="{}/mc{}_age{}_logs.log".format(chi2_path,self.mc_num,self.iso_age))
+			optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
+		
+		optimizer.maximize(
+			init_points=100,
+			n_iter=100,
+		)
+		self.chi2 = [self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'] ,-optimizer.max['target']]
+		self.writeout(chi2_path)
+		# for dm in dms:
+		# 	for red in reds:
+		# 		obs_cut = self.obs_data[(self.obs_data['vi'] - red < (obs_vi_max - reds[-1])) & (self.obs_data['vi'] - red > (obs_vi_min - reds[0]))& (self.obs_data['v'] - dm < (obs_v_max - dms[-1])) & (self.obs_data['v'] - dm > (obs_v_min - dms[0]))]
+		# 		obs_size = len(obs_cut)
+		# 		vi_32 = np.float32((obs_cut['vi'].values - red)*width_coeff)
+		# 		v_32 = np.float32(obs_cut['v'].values - dm)
+		# 		bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
+		# 		#calculate chi2
+		# 		chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
+		# self.chi2 = chi2
 
 
 	def writeout(self,path):
@@ -248,8 +288,7 @@ class chi2(utiles):
 		self.check_directories(iso_path)
 		#run code
 		self.read_input(obs_data_path)
-		self.main(write_vorbin,cmd_path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,dms,reds,iso_path)        
-		self.writeout(chi2_path)
+		self.main(write_vorbin,cmd_path, dm_max, dm_min, red_max, red_min,iso_path,chi2_path)
 		print("done mc{}".format(self.mc_num))
 
 class resample(utiles):
