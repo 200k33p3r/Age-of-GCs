@@ -10,14 +10,14 @@ program RadialDensity
   real, parameter :: xguess = 3000
   real, parameter :: yguess = 3000
   real, parameter :: radius = 200  !200 pixels from guess center
-  real, parameter :: Vmax = 19.279
-  real, parameter :: Vmin = 15.297
-  real, parameter :: VImin = 0.473
-  real, parameter :: VImax = 0.791
+  real, parameter :: Vmax = 20.779
+  real, parameter :: Vmin = 13.797
+  real, parameter :: VImin = 0.463
+  real, parameter :: VImax = 0.916
   integer :: Nstars,nfit,i,j,id,nage
   REAL, dimension(:),allocatable :: xx,yy,fit_id
   REAL, dimension(:),allocatable :: xt,yt,vt,vit,dist2,idlist
-  real :: t1, rad2,xcen,ycen,area  
+  real :: t1,t2,t3,t4,rad2,xcen,ycen,area  
   character(len=40) :: filename
   character(len=10) :: cNstars
   integer :: n_args  !read in Sample Size  from command line
@@ -39,7 +39,7 @@ program RadialDensity
   open (unit=4, file = filename, status='old')
   read(4,*)    !skip header line
   do i = 1,Nstars
-     read(4,*)id, xt(i),yt(i),vt(i),t1, vit(i)
+     read(4,*) id, vt(i), t1, t2, t3, vit(i), t4, xt(i), yt(i)
      dist2(i) = (xt(i) - xguess)**2 + (yt(i) -yguess)**2
      idlist(i) = id
      if( dist2(i) <= rad2 .and. vt(i) <= Vmax .and. &

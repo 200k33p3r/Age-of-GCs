@@ -28,7 +28,7 @@ program MakeFakeCMD
 
   real, parameter :: ten = 10.0, negpfour= -0.4, ntwopfive =-2.5
   
-  real :: xx,Viso
+  real :: xx,Viso,Iiso
   
   REAL, dimension(:),allocatable :: dist !input distribution of distances
   real, dimension(:),allocatable :: rdist  !randomly generated distance from center
@@ -157,8 +157,8 @@ program MakeFakeCMD
         call findFitPoints(isoV,isoVI,niso,Vsgb,Isgb, indxmin,indxmax,fitindxmin,fitindxmax)
    !     write(*,*)'in main:',indxmin,indxmax,isomass(indxmin),isomass(indxmax), Vsgb
 
-        minmass = isomass(indxmin)
-        maxmass = isomass(indxmax)
+        minmass = isomass(fitindxmin)
+        maxmass = isomass(fitindxmax)
    !     write(*,*)'age, min/max mass:',age, minmass,maxmass
         m1 = maxmass**(IMFslope+1.) - minmass**(IMFslope+1.)
         m2 =  minmass**(IMFslope+1.)
@@ -170,10 +170,10 @@ program MakeFakeCMD
            call random_number(xx)
            mass(i) = ( m1*xx + m2 )**powmass
            !interpolate in isochrone mass to get V and VI of simulated star
-           call lininterp(isomass(indxmin:indxmax),isoV(indxmin:indxmax), &
-                mass(i),Vtemp,indxmax-indxmin)
-           call lininterp(isomass(indxmin:indxmax),isoVI(indxmin:indxmax), &
-                mass(i),VItemp,indxmax-indxmin)
+           call lininterp(isomass(fitindxmin:fitindxmax),isoV(fitindxmin:fitindxmax), &
+                mass(i),Vtemp,fitindxmax-fitindxmin)
+           call lininterp(isomass(fitindxmin:fitindxmax),isoVI(fitindxmin:fitindxmax), &
+                mass(i),VItemp,fitindxmax-fitindxmin)
            Itemp = Vtemp - VItemp
    !        write(*,'(I6,2x,F11.4,4F10.5)')i,rdist(i),mass(i),VV(i),VI(i),II(i)
            
@@ -223,8 +223,13 @@ program MakeFakeCMD
                     call lininterp(isoI(indxmin:indxmax), &
                          isoV(indxmin:indxmax), &
                          Itemp + Ierr,Viso,indxmax-indxmin)
+                    call lininterp(isoV(indxmin:indxmax), &
+                         isoI(indxmin:indxmax), &
+                         Vtemp + Verr,Iiso,indxmax-indxmin)
                     if (Vtemp +  Verr <= Viso + 0.08 .and. &
-                         Vtemp +  Verr >= Viso - 0.08) then
+                         Vtemp +  Verr >= Viso - 0.08 .and. &
+                         Itemp + Ierr <= Iiso + 0.08 .and. &
+                         Itemp + Ierr >= Iiso - 0.08) then
                        npt = npt + 1
                        VV(npt) = Vtemp +  Verr
                        II(npt) = Itemp + Ierr
@@ -408,7 +413,7 @@ subroutine findFitPoints(VV,VI,niso,Vsgb,Isgb,indxmin,indxmax, fitindxmin,fitind
   real ::  Vsgb, Isgb
 
   real, parameter  :: sgbDeltaColour = 0.05  !difference in color between MSTO & SGB
-  real, parameter :: deltaMag = 2.5   !fit region is defined to be within +/-deltaMag of the SGB
+  real, parameter :: deltaMag = 2.0   !fit region is defined to be within +/-deltaMag of the SGB
   integer :: i,ito,nmax,locate
   real :: minVI,VIsgb,hitmag
 
@@ -442,11 +447,11 @@ subroutine findFitPoints(VV,VI,niso,Vsgb,Isgb,indxmin,indxmax, fitindxmin,fitind
   !  write(*,*)indxmin,indxmax,VV(indxmin), VV(indxmax)
 
   !find the location of the point 1 mag fainter than the fit region
-  hitmag = Vsgb + deltaMag + 0.75
+  hitmag = Vsgb + deltaMag + 1
   !hitmag = Vsgb + deltaMag
   indxmin = locate (VV(1:fitindxmin), hitmag, fitindxmin ) - 1
   !find the location of the point 1 mag brighter than the fit region
-  hitmag = Vsgb - deltaMag - 0.75
+  hitmag = Vsgb - deltaMag - 1
   !hitmag = Vsgb - deltaMag
   indxmax = locate(VV(fitindxmax:niso),hitmag,niso-fitindxmax) + 1
   indxmax = fitindxmax + indxmax

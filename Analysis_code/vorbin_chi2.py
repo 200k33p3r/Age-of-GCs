@@ -249,22 +249,12 @@ class chi2(utiles):
 
 
 	def __init__(self, GC_name, mc_num, iso_age, write_vorbin=False, Tb_size=30):
-		#define boundaris
-		if GC_name == 'M55':
-			obs_vi_max = 0.792
-			obs_vi_min = 0.462
-			obs_v_max = 19.28
-			obs_v_min = 15.296
 		#define distance modulus and reddening ranges
 		if GC_name == 'M55':
-			dm_max = 14.00
-			dm_min = 13.50
-			red_max = 0.15
+			dm_max = 14.40
+			dm_min = 13.40
+			red_max = 0.20
 			red_min = 0.00
-			dm_num = 51
-			red_num = 16
-		dms = np.linspace(dm_min,dm_max,dm_num)
-		reds = np.linspace(red_min,red_max,red_num)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
