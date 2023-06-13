@@ -5,7 +5,7 @@ import time
 
 class sCMD:
 	def CMD_gen(self):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', '0.02', '4000000', str(self.age), str(self.GC_name),str(self.feh)])
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
 
 	def CMD_check(self):
 		check_time = 0
@@ -36,6 +36,8 @@ class sCMD:
 		self.GC_name = str(GC_name)
 		if GC_name == 'M55':
 			self.feh=190
+			#binary from Milone 2012 A&A 540, A16 (2012)
+			self.binary=0.04
 		self.mc_num = str(mc_num)
 		if float(age) < 10000:
 			self.age = '0'+str(age)

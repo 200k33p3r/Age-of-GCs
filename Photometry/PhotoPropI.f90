@@ -208,7 +208,7 @@ program PhotoPropI
          write(30,*) binrad(i),binmag(j), ngood(i,j), &
               completeness(i,j)
          
-         write(filename1, '(A4,I0.2,A4)') startfile(kin), outfile,".dat"
+         write(filename1, '(A4,I0.3,A4)') startfile(kin), outfile,".dat"
          filename1 = trim(filename1)
  !        write(*,*)filename1
          open(unit=20, file=filename1)

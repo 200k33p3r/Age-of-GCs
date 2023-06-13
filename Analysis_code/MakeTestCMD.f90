@@ -484,7 +484,7 @@ end subroutine findFitPoints
   integer :: numt,numx
 
   character(len=29) :: filename
-  character(len=24) :: filename1
+  character(len=25) :: filename1
   character(len=17),parameter,dimension(nfilter) ::  &
        startfile =["./inputfiles/Verr", "./inputfiles/Ierr"]
 
@@ -534,7 +534,7 @@ end subroutine findFitPoints
         do j = 1,Nbinrad
            iopen = (k-1)*10 + j
 !        write(*,*) 'iopen:', iopen
-           write(filename1, '(A17,I0.2,A5)') startfile(ifilter), iopen,"s.dat"
+           write(filename1, '(A17,I0.3,A5)') startfile(ifilter), iopen,"s.dat"
 !           filename1 = trim(filename1)
 
 !           write(*,*)"reading file: ", filename1

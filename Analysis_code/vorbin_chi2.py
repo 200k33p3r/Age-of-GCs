@@ -227,8 +227,9 @@ class chi2(utiles):
 			init_points=100,
 			n_iter=100,
 		)
-		self.chi2 = [self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'] ,-optimizer.max['target']]
-		self.writeout(chi2_path)
+		chi2 = np.array([self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'] ,-optimizer.max['target'], len(self.obs_cut(optimizer.max['params']['dm'], optimizer.max['params']['red']))])
+		#print(chi2)
+		pd.DataFrame(chi2).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
 		# for dm in dms:
 		# 	for red in reds:
 		# 		obs_cut = self.obs_data[(self.obs_data['vi'] - red < (obs_vi_max - reds[-1])) & (self.obs_data['vi'] - red > (obs_vi_min - reds[0]))& (self.obs_data['v'] - dm < (obs_v_max - dms[-1])) & (self.obs_data['v'] - dm > (obs_v_min - dms[0]))]
@@ -239,14 +240,6 @@ class chi2(utiles):
 		# 		#calculate chi2
 		# 		chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
 		# self.chi2 = chi2
-
-
-	def writeout(self,path):
-		#write chi2 to csv file
-		dp = pd.DataFrame(data=self.chi2,columns=['age','dm','red','chi2'])
-		path = "{}/chi2_a{}_mc{}".format(path,self.iso_age,self.mc_num)
-		dp.to_csv(path)
-
 
 	def __init__(self, GC_name, mc_num, iso_age, write_vorbin=False, Tb_size=30):
 		#define distance modulus and reddening ranges
