@@ -177,7 +177,7 @@ class utiles:
 		new_obs = self.obs_cut(dm, red)
 		obs_size = len(new_obs)
 		bin_count = self.search_vorbin(self.XBar, self.YBar, obs_size, (new_obs['vi'].values - red)*self.width_coeff, new_obs['v'].values - dm)
-		return -(np.inner(np.divide(bin_count,self.bin_count_std/(self.total_pt/obs_size)) - 1, bin_count - self.bin_count_std/(self.total_pt/obs_size)))/(obs_size - 22)
+		return (np.inner(np.divide(bin_count,self.bin_count_std/(self.total_pt/obs_size)) - 1, bin_count - self.bin_count_std/(self.total_pt/obs_size)))/(obs_size - 22)
 	
 class chi2(utiles):
 
@@ -198,10 +198,11 @@ class chi2(utiles):
 		self.width_coeff = (self.obs_v_max - self.obs_v_min)/(self.obs_vi_max - self.obs_vi_min)
 		#check whether vorbin already existed or not
 		if os.path.isfile("{}/bin_mc{}.age{}".format(self.vorbin_path,self.mc_num,age)) == True:
-			vorbin = pd.read_csv("{}/bin_mc{}.age{}".format(self.vorbin_path,self.mc_num,age), names=['x_gen', 'y_gen','bin_count_std'])
+			vorbin = pd.read_csv("{}/bin_mc{}.age{}".format(self.vorbin_path,self.mc_num,age), skiprows=1,names=['x_gen', 'y_gen','bin_count_std'])
 			self.XBar = np.float32(vorbin['x_gen'].values)
 			self.YBar = np.float32(vorbin['y_gen'].values)
 			self.bin_count_std = vorbin['bin_count_std'].values
+			self.total_pt = len(vorbin)
 		else:
 			#generate vorbin use the first 100000 data points
 			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
@@ -248,15 +249,15 @@ class chi2(utiles):
 		res = gp_minimize(self.dm_red_search,                  # the function to minimize
                   bounds,      # the bounds on each dimension of x
                   acq_func="EI",
-                  n_calls=200,         # the number of evaluations of f
-                  n_initial_points=100,
+                  n_calls=100,         # the number of evaluations of f
+                  n_initial_points=10,
                   noise=0,
                   acq_optimizer="lbfgs",
                   n_restarts_optimizer=5,
                   #n_random_starts=100,  # the number of random initialization points
                  )
-		dm_fit = res['x_iter'][0]
-		red_fit = res['x_iter'][1]
+		dm_fit = res['x'][0]
+		red_fit = res['x'][1]
 		chi2_fit = res['fun']
 		retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, len(self.obs_cut(dm_fit, red_fit))])
 		#print(chi2)
