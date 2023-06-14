@@ -6,7 +6,9 @@ import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 import subprocess
 from scipy.interpolate import interp1d
-from bayes_opt import BayesianOptimization
+#from bayes_opt import BayesianOptimization
+from skopt import gp_minimize
+from skopt.space.space import Real
 
 #force the code to run on 1core as serial jobs on Stampede2
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -168,7 +170,10 @@ class utiles:
 		return self.obs_data[(self.obs_data['vi'] - red < (self.obs_vi_max)) & (self.obs_data['vi'] - red > (self.obs_vi_min))& (self.obs_data['v'] - dm < (self.obs_v_max)) & (self.obs_data['v'] - dm > (self.obs_v_min))]
 
 	#find chi2/df
-	def dm_red_search(self, dm, red):
+	# def dm_red_search(self, dm, red):
+	#change for skopt
+	def dm_red_search(self, theta):
+		dm, red = theta
 		new_obs = self.obs_cut(dm, red)
 		obs_size = len(new_obs)
 		bin_count = self.search_vorbin(self.XBar, self.YBar, obs_size, (new_obs['vi'].values - red)*self.width_coeff, new_obs['v'].values - dm)
@@ -191,45 +196,71 @@ class chi2(utiles):
 		self.obs_v_max = max(cmd['v'].values)
 		self.obs_v_min = min(cmd['v'].values)
 		self.width_coeff = (self.obs_v_max - self.obs_v_min)/(self.obs_vi_max - self.obs_vi_min)
-		#generate vorbin use the first 100000 data points
-		V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
-		x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
-		#reduce memory usage for matrix operations
-		self.XBar = np.float32(x_gen)
-		self.YBar = np.float32(y_gen)
-		v_32 = np.float32(cmd['v'].values)
-		vi_32 = np.float32(cmd['vi'].values*self.width_coeff)
-		#find standard bin count by search through all the theoretical data points
-		self.total_pt = len(cmd)
-		self.bin_count_std = self.search_vorbin(self.XBar, self.YBar, self.total_pt, vi_32, v_32)
-		#write vorbin infor if desired
-		if write_vorbin == True:
-			self.writevorbin(self.XBar, self.YBar, self.bin_count_std, self.mc_num, age,self.vorbin_path)
+		#check whether vorbin already existed or not
+		if os.path.isfile("{}/bin_mc{}.age{}".format(self.vorbin_path,self.mc_num,age)) == True:
+			vorbin = pd.read_csv("{}/bin_mc{}.age{}".format(self.vorbin_path,self.mc_num,age), names=['x_gen', 'y_gen','bin_count_std'])
+			self.XBar = np.float32(vorbin['x_gen'].values)
+			self.YBar = np.float32(vorbin['y_gen'].values)
+			self.bin_count_std = vorbin['bin_count_std'].values
+		else:
+			#generate vorbin use the first 100000 data points
+			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
+			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			#reduce memory usage for matrix operations
+			self.XBar = np.float32(x_gen)
+			self.YBar = np.float32(y_gen)
+			v_32 = np.float32(cmd['v'].values)
+			vi_32 = np.float32(cmd['vi'].values*self.width_coeff)
+			#find standard bin count by search through all the theoretical data points
+			self.total_pt = len(cmd)
+			self.bin_count_std = self.search_vorbin(self.XBar, self.YBar, self.total_pt, vi_32, v_32)
+			#write vorbin infor if desired
+			if write_vorbin == True:
+				self.writevorbin(self.XBar, self.YBar, self.bin_count_std, self.mc_num, age,self.vorbin_path)
 		#search through observed data
 		#Utilize Bayesian optimization method to find the best fit DM and red value
 		# Bounded region of parameter space
-		pbounds = {'dm': (dm_min, dm_max), 'red': (red_min, red_max)}
+		# pbounds = {'dm': (dm_min, dm_max), 'red': (red_min, red_max)}
 
-		optimizer = BayesianOptimization(
-			f=self.dm_red_search,
-			pbounds=pbounds,
-			random_state=1,
-			verbose=0,
-		)
+		# optimizer = BayesianOptimization(
+		# 	f=self.dm_red_search,
+		# 	pbounds=pbounds,
+		# 	random_state=1,
+		# 	verbose=0,
+		# )
 
-		if write_chi2_log == True:
-			from bayes_opt.logger import JSONLogger
-			from bayes_opt.event import Events
-			logger = JSONLogger(path="{}/mc{}_age{}_logs.log".format(chi2_path,self.mc_num,self.iso_age))
-			optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
+		# if write_chi2_log == True:
+		# 	from bayes_opt.logger import JSONLogger
+		# 	from bayes_opt.event import Events
+		# 	logger = JSONLogger(path="{}/mc{}_age{}_logs.log".format(chi2_path,self.mc_num,self.iso_age))
+		# 	optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 		
-		optimizer.maximize(
-			init_points=100,
-			n_iter=100,
-		)
-		chi2 = np.array([self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'] ,-optimizer.max['target'], len(self.obs_cut(optimizer.max['params']['dm'], optimizer.max['params']['red']))])
+		# optimizer.maximize(
+		# 	init_points=100,
+		# 	n_iter=100,
+		# )
+		# chi2 = np.array([self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'] ,-optimizer.max['target'], len(self.obs_cut(optimizer.max['params']['dm'], optimizer.max['params']['red']))])
+		
+		#Try to use Bayesian optimization from skopt
+		dim1 = Real(name='dm', low=dm_min, high=dm_max)
+		dim2 = Real(name='red', low=red_min, high=red_max)
+		bounds = [dim1, dim2]
+		res = gp_minimize(self.dm_red_search,                  # the function to minimize
+                  bounds,      # the bounds on each dimension of x
+                  acq_func="EI",
+                  n_calls=200,         # the number of evaluations of f
+                  n_initial_points=100,
+                  noise=0,
+                  acq_optimizer="lbfgs",
+                  n_restarts_optimizer=5,
+                  #n_random_starts=100,  # the number of random initialization points
+                 )
+		dm_fit = res['x_iter'][0]
+		red_fit = res['x_iter'][1]
+		chi2_fit = res['fun']
+		retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, len(self.obs_cut(dm_fit, red_fit))])
 		#print(chi2)
-		pd.DataFrame(chi2).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
+		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
 		# for dm in dms:
 		# 	for red in reds:
 		# 		obs_cut = self.obs_data[(self.obs_data['vi'] - red < (obs_vi_max - reds[-1])) & (self.obs_data['vi'] - red > (obs_vi_min - reds[0]))& (self.obs_data['v'] - dm < (obs_v_max - dms[-1])) & (self.obs_data['v'] - dm > (obs_v_min - dms[0]))]
