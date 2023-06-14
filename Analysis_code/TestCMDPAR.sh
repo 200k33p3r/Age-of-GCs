@@ -33,13 +33,13 @@ done
 
 mkdir $tmp
 
-cp define_errors.f90 $tmp
-cp random.f90 $tmp
-cp MakeTestCMD.f90 $tmp
+cp $local/define_errors.f90 $tmp
+cp $local/random.f90 $tmp
+cp $local/MakeTestCMD.f90 $tmp
 #cp random.mod $tmp
 #cp real_precision.mod $tmp
-cp real_precision.f $tmp
-cp -r inputfiles $tmp
+cp $local/real_precision.f $tmp
+cp -r $local/inputfiles $tmp
 
 cd $tmp
 pwd

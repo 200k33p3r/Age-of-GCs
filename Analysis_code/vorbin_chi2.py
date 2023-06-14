@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
-import subprocess
 from scipy.interpolate import interp1d
 #from bayes_opt import BayesianOptimization
 from skopt import gp_minimize
@@ -167,7 +166,7 @@ class utiles:
 	
 	#trim down the obseravtional data to the fiting region
 	def obs_cut(self, dm, red):
-		return self.obs_data[(self.obs_data['vi'] - red < (self.obs_vi_max)) & (self.obs_data['vi'] - red > (self.obs_vi_min))& (self.obs_data['v'] - dm < (self.obs_v_max)) & (self.obs_data['v'] - dm > (self.obs_v_min))]
+		return self.obs_data[(self.obs_data[:,self.vi_idx] - red < (self.obs_vi_max)) & (self.obs_data[:,self.vi_idx] - red > (self.obs_vi_min))& (self.obs_data[:,self.v_idx] - dm < (self.obs_v_max)) & (self.obs_data[:,self.v_idx] - dm > (self.obs_v_min))]
 
 	#find chi2/df
 	# def dm_red_search(self, dm, red):
@@ -176,14 +175,20 @@ class utiles:
 		dm, red = theta
 		new_obs = self.obs_cut(dm, red)
 		obs_size = len(new_obs)
-		bin_count = self.search_vorbin(self.XBar, self.YBar, obs_size, (new_obs['vi'].values - red)*self.width_coeff, new_obs['v'].values - dm)
+		bin_count = self.search_vorbin(self.XBar, self.YBar, obs_size, (new_obs[:,self.vi_idx] - red)*self.width_coeff, new_obs[:,self.v_idx] - dm)
 		return (np.inner(np.divide(bin_count,self.bin_count_std/(self.total_pt/obs_size)) - 1, bin_count - self.bin_count_std/(self.total_pt/obs_size)))/(obs_size - 22)
 	
 class chi2(utiles):
 
 	def read_input(self,path):
 		#read M92 observed data
-		self.obs_data = pd.read_csv(path)
+		obs_data = pd.read_csv(path)
+		names = ['v','v_err','i','i_err','vi','vi_err','x','y']
+		for i in range(len(names)):
+			for j in range(len(obs_data.columns)):
+				if names[i] == obs_data.columns[j]:
+					setattr(self,names[i] + '_idx', j)
+		self.obs_data = pd.read_csv(path).to_numpy()
 		#self.obs_size = len(self.obs_data)
 
 	def main(self,write_vorbin,path, dm_max, dm_min, red_max, red_min, iso_path,chi2_path,write_chi2_log=False):
