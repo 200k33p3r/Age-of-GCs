@@ -202,7 +202,7 @@ class chi2(utiles):
 			self.XBar = np.float32(vorbin['x_gen'].values)
 			self.YBar = np.float32(vorbin['y_gen'].values)
 			self.bin_count_std = vorbin['bin_count_std'].values
-			self.total_pt = len(vorbin)
+			self.total_pt = np.sum(self.bin_count_std)
 		else:
 			#generate vorbin use the first 100000 data points
 			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
