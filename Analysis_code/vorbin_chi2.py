@@ -5,14 +5,15 @@ import pandas as pd
 import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 from scipy.interpolate import interp1d
+from scipy.optimize import differential_evolution as DE
 #from bayes_opt import BayesianOptimization
-from skopt import gp_minimize
-from skopt.space.space import Real
+#from skopt import gp_minimize
+#from skopt.space.space import Real
 
 #force the code to run on 1core as serial jobs on Stampede2
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['NUMEXPR_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
+#os.environ['OPENBLAS_NUM_THREADS'] = '1'
+#os.environ['NUMEXPR_NUM_THREADS'] = '1'
+#os.environ['MKL_NUM_THREADS'] = '1'
 
 class utiles:
 	def check_file(self,path):
@@ -248,22 +249,43 @@ class chi2(utiles):
 		# chi2 = np.array([self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'] ,-optimizer.max['target'], len(self.obs_cut(optimizer.max['params']['dm'], optimizer.max['params']['red']))])
 		
 		#Try to use Bayesian optimization from skopt
-		dim1 = Real(name='dm', low=dm_min, high=dm_max)
-		dim2 = Real(name='red', low=red_min, high=red_max)
-		bounds = [dim1, dim2]
-		res = gp_minimize(self.dm_red_search,                  # the function to minimize
-                  bounds,      # the bounds on each dimension of x
-                  acq_func="EI",
-                  n_calls=100,         # the number of evaluations of f
-                  n_initial_points=10,
-                  noise=0,
-                  acq_optimizer="lbfgs",
-                  n_restarts_optimizer=5,
-                  #n_random_starts=100,  # the number of random initialization points
-                 )
-		dm_fit = res['x'][0]
-		red_fit = res['x'][1]
-		chi2_fit = res['fun']
+		# dim1 = Real(name='dm', low=dm_min, high=dm_max)
+		# dim2 = Real(name='red', low=red_min, high=red_max)
+		# bounds = [dim1, dim2]
+		# res = gp_minimize(self.dm_red_search,                  # the function to minimize
+        #           bounds,      # the bounds on each dimension of x
+        #           acq_func="EI",
+        #           n_calls=100,         # the number of evaluations of f
+        #           n_initial_points=10,
+        #           noise=0,
+        #           acq_optimizer="lbfgs",
+        #           n_restarts_optimizer=5,
+        #           #n_random_starts=100,  # the number of random initialization points
+        #          )
+		# dm_fit = res['x'][0]
+		# red_fit = res['x'][1]
+		# chi2_fit = res['fun']
+		# retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, len(self.obs_cut(dm_fit, red_fit))])
+
+
+		#implement differential Evolution algorithm
+		bounds = [(dm_min, dm_max) ,(red_min,red_max)]
+		res = DE(self.dm_red_search, bounds,tol=0.001,popsize=50)
+		chi2_fit, dm_fit, red_fit = res['fun'], res['x'][0], res['x'][1]
+
+		#define new bounds based on +/- 0.01 mag from the fit dm an +/- 0.01 mag in reddening
+		dm_bound = np.linspace(dm_fit - 0.01, dm_fit + 0.01, 20)
+		red_bound = np.linspace(red_fit - 0.01, red_fit + 0.01, 20)
+		#run the grid search
+		for dm in dm_bound:
+			for red in red_bound:
+				chi2 = self.dm_red_search([dm_fit,red_fit])
+				if chi2 < chi2_fit:
+					chi2_fit = chi2
+					dm_fit = dm
+					red_fit = red
+
+		#write out the result
 		retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, len(self.obs_cut(dm_fit, red_fit))])
 		#print(chi2)
 		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
