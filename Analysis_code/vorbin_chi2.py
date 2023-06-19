@@ -74,7 +74,7 @@ class utiles:
 		VI_MSTO = df_MSTO['vi'].values*self.width_coeff
 		V_GB = df_GB['v'].values
 		VI_GB = df_GB['vi'].values*self.width_coeff
-		return V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB
+		return [V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB]
 	
 	#find MSTO and GB eeps when using isochrones to generate vorbin
 	def find_two_eeps(self,path):
@@ -111,37 +111,49 @@ class utiles:
 
 	#generate vorbin for three different regions in the CMD: MS, MSTO, and GB
 	#In default, we use 800 bins with 2:5:1 for three regions.
-	def generate_vorbin(self,V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB,MS_bin_num=200,MSTO_bin_num=500,GB_bin_num=100,targetSN=10):
-		#Do main sequence
-		#Define number of stars used to generate vorbin based on TargetSN and bin_num
-		fit_num = MS_bin_num*targetSN**2
-		x = V_MS[:fit_num]
-		y = VI_MS[:fit_num]
-		signal = np.array([1]*fit_num)
-		noise = signal
-		#do vorbin
-		_, x_gen_MS, y_gen_MS, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
-		#Do main sequence turn off
-		#Define number of stars used to generate vorbin based on TargetSN and bin_num
-		fit_num = MSTO_bin_num*targetSN**2
-		x = V_MSTO[:fit_num]
-		y = VI_MSTO[:fit_num]
-		signal = np.array([1]*fit_num)
-		noise = signal
-		#do vorbin
-		_, x_gen_MSTO, y_gen_MSTO, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
-		#Do giant branch
-		#Define number of stars used to generate vorbin based on TargetSN and bin_num
-		fit_num = GB_bin_num*targetSN**2
-		x = V_GB[:fit_num]
-		y = VI_GB[:fit_num]
-		signal = np.array([1]*fit_num)
-		noise = signal
-		#do vorbin
-		_, x_gen_GB, y_gen_GB, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
-		#return location of bins
-		x_gen = np.concatenate((x_gen_MS,x_gen_MSTO,x_gen_GB))
-		y_gen = np.concatenate((y_gen_MS,y_gen_MSTO,y_gen_GB))
+	def generate_vorbin(self,Mags,MS_bin_num=200,MSTO_bin_num=500,GB_bin_num=100,UniSN=False, targetSN=10):
+		if UniSN == True:
+			V, VI = Mags
+			#Define number of stars used to generate vorbin based on TargetSN and bin_num
+			fit_num = 800*targetSN**2
+			x = V[:fit_num]
+			y = VI[:fit_num]
+			signal = np.array([1]*fit_num)
+			noise = signal
+			#do vorbin
+			_, x_gen, y_gen, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
+		else:
+			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = Mags
+			#Do main sequence
+			#Define number of stars used to generate vorbin based on TargetSN and bin_num
+			fit_num = MS_bin_num*targetSN**2
+			x = V_MS[:fit_num]
+			y = VI_MS[:fit_num]
+			signal = np.array([1]*fit_num)
+			noise = signal
+			#do vorbin
+			_, x_gen_MS, y_gen_MS, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
+			#Do main sequence turn off
+			#Define number of stars used to generate vorbin based on TargetSN and bin_num
+			fit_num = MSTO_bin_num*targetSN**2
+			x = V_MSTO[:fit_num]
+			y = VI_MSTO[:fit_num]
+			signal = np.array([1]*fit_num)
+			noise = signal
+			#do vorbin
+			_, x_gen_MSTO, y_gen_MSTO, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
+			#Do giant branch
+			#Define number of stars used to generate vorbin based on TargetSN and bin_num
+			fit_num = GB_bin_num*targetSN**2
+			x = V_GB[:fit_num]
+			y = VI_GB[:fit_num]
+			signal = np.array([1]*fit_num)
+			noise = signal
+			#do vorbin
+			_, x_gen_GB, y_gen_GB, _, _, _, _, _ = voronoi_2d_binning(x, y, signal, noise, targetSN, cvt=False, pixelsize=1, plot=False,quiet=True, sn_func=None, wvt=True)
+			#return location of bins
+			x_gen = np.concatenate((x_gen_MS,x_gen_MSTO,x_gen_GB))
+			y_gen = np.concatenate((y_gen_MS,y_gen_MSTO,y_gen_GB))
 		return x_gen, y_gen
 
 	def find_fit_val(self,arr,x):
@@ -192,7 +204,7 @@ class chi2(utiles):
 		self.obs_data = pd.read_csv(path).to_numpy()
 		#self.obs_size = len(self.obs_data)
 
-	def main(self,write_vorbin,path, dm_max, dm_min, red_max, red_min, iso_path,chi2_path,write_chi2_log=False):
+	def main(self,write_vorbin,path, dm_max, dm_min, red_max, red_min, iso_path,chi2_path,write_chi2_log=False,UniSN=False):
 		age = self.iso_age
 		#read cmd files
 		cmd = pd.read_csv("{}/mc{}.a{}".format(path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
@@ -210,9 +222,13 @@ class chi2(utiles):
 			self.bin_count_std = vorbin['bin_count_std'].values
 			self.total_pt = np.sum(self.bin_count_std)
 		else:
-			#generate vorbin use the first 100000 data points
-			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
-			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			if UniSN == False:
+				#generate vorbin use the first 100000 data points
+				V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
+				x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			else:
+				#generate vorbin use the first 100000 data points
+				x_gen, y_gen = self.generate_vorbin([cmd['v'].values,cmd['vi'].values*self.width_coeff], UniSN=True)
 			#reduce memory usage for matrix operations
 			self.XBar = np.float32(x_gen)
 			self.YBar = np.float32(y_gen)
@@ -300,7 +316,7 @@ class chi2(utiles):
 		# 		chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
 		# self.chi2 = chi2
 
-	def __init__(self, GC_name, mc_num, iso_age, write_vorbin=False, Tb_size=30):
+	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30):
 		#define distance modulus and reddening ranges
 		if GC_name == 'M55':
 			dm_max = 14.40
@@ -330,7 +346,7 @@ class chi2(utiles):
 		self.check_directories(iso_path)
 		#run code
 		self.read_input(obs_data_path)
-		self.main(write_vorbin,cmd_path, dm_max, dm_min, red_max, red_min,iso_path,chi2_path)
+		self.main(write_vorbin,cmd_path, dm_max, dm_min, red_max, red_min,iso_path,chi2_path,UniSN=UniSN)
 		print("done mc{}".format(self.mc_num))
 
 class resample(utiles):
