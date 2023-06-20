@@ -78,7 +78,30 @@ def define_func(iso):
     vi_func = interp1d(m,vi,kind='‘cubic’')
     return m_func, v_func, vi_func
 
+def find_change(q_sample, v_sample, m_func, v_func, vi_func):
+    retval = np.zeros((len(v_sample), len(q_sample), 2))
+    for i, v in enumerate(v_sample):
+        for j, q in enumerate(q_sample):
+            v1 = v
+            m1 = m_func(v1)
+            vi1 = vi_func(m1)
+            i1 = v1 - vi1
+            m2 = m1*q
+            v2 = v_func(m2)
+            vi2 = vi_func(m2)
+            i2 = v2 - vi2
+            v_bi = -2.5*np.log10(10**(-0.4*v1) + 10**(-0.4*v2))
+            i_bi = -2.5*np.log10(10**(-0.4*i1) + 10**(-0.4*i2))
+            vi_bi = v_bi - i_bi
+            retval[i,j,0] = v_bi - v1
+            retval[i,j,1] = vi_bi - vi1
+    return retval
+
+
 def __init__(iso_path, age, mag_cut=2):
     iso = read_iso(iso_path, age)
     v_min, v_max = define_bound(iso, mag_cut=mag_cut)
     m_func, v_func, vi_func = define_func(iso)
+    q_sample = np.linspace(0.5,1,100)
+    v_sample = np.linspace(v_min,v_max,400)
+    find_change(q_sample, v_sample, m_func, v_func, vi_func)
