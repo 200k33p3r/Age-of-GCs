@@ -225,7 +225,7 @@ class chi2(utiles):
 			if UniSN == False:
 				#generate vorbin use the first 100000 data points
 				V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
-				x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+				x_gen, y_gen = self.generate_vorbin([V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB])
 			else:
 				#generate vorbin use the first 100000 data points
 				x_gen, y_gen = self.generate_vorbin([cmd['v'].values,cmd['vi'].values*self.width_coeff], UniSN=True)
