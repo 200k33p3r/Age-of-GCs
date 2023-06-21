@@ -10,8 +10,11 @@
 import numpy as np
 import pandas as pd
 import os
-from vorbin_chi2.utiles import check_file
 from scipy.interpolate import interp1d
+
+def check_file(path):
+	if os.path.exists(path) == False:
+		raise Exception("Cannot find inputfile at {}".format(path))
 
 def read_iso(iso_path,age):
     check_file(iso_path)
@@ -79,7 +82,7 @@ def define_func(iso):
     return m_func, v_func, vi_func
 
 def find_change(q_sample, v_sample, m_func, v_func, vi_func):
-    retval = np.zeros((len(v_sample), len(q_sample), 2))
+    retval = np.zeros((len(v_sample), len(q_sample), 4))
     for i, v in enumerate(v_sample):
         for j, q in enumerate(q_sample):
             v1 = v
@@ -95,13 +98,17 @@ def find_change(q_sample, v_sample, m_func, v_func, vi_func):
             vi_bi = v_bi - i_bi
             retval[i,j,0] = v_bi - v1
             retval[i,j,1] = vi_bi - vi1
+            retval[i.j,2] = v - min(v_sample)
+            retval[i,j,3] = q
     return retval
 
 
-def __init__(iso_path, age, mag_cut=2):
+def __init__(iso_path, age, GC_name, retval_path, mag_cut=2):
     iso = read_iso(iso_path, age)
     v_min, v_max = define_bound(iso, mag_cut=mag_cut)
     m_func, v_func, vi_func = define_func(iso)
     q_sample = np.linspace(0.5,1,100)
     v_sample = np.linspace(v_min,v_max,400)
-    find_change(q_sample, v_sample, m_func, v_func, vi_func)
+    data = find_change(q_sample, v_sample, m_func, v_func, vi_func)
+    dp = pd.DataFrame(data=data, columns=['v_diff', 'vi_diff', 'v', 'q'])
+    dp.to_csv("{}/{}_binary_chart.csv".format(retval_path, GC_name),index=False)
