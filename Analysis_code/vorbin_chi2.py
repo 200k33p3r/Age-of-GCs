@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
@@ -116,8 +116,9 @@ class utiles:
 			V, VI = Mags
 			#Define number of stars used to generate vorbin based on TargetSN and bin_num
 			fit_num = 800*targetSN**2
-			x = V[:fit_num]
-			y = VI[:fit_num]
+			mask = np.random.choice(range(len(V)), size=fit_num, replace=False)
+			x = V[mask]
+			y = VI[mask]
 			signal = np.array([1]*fit_num)
 			noise = signal
 			#do vorbin
@@ -127,8 +128,9 @@ class utiles:
 			#Do main sequence
 			#Define number of stars used to generate vorbin based on TargetSN and bin_num
 			fit_num = MS_bin_num*targetSN**2
-			x = V_MS[:fit_num]
-			y = VI_MS[:fit_num]
+			mask = np.random.choice(range(len(V_MS)), size=fit_num, replace=False)
+			x = V_MS[mask]
+			y = VI_MS[mask]
 			signal = np.array([1]*fit_num)
 			noise = signal
 			#do vorbin
@@ -136,8 +138,9 @@ class utiles:
 			#Do main sequence turn off
 			#Define number of stars used to generate vorbin based on TargetSN and bin_num
 			fit_num = MSTO_bin_num*targetSN**2
-			x = V_MSTO[:fit_num]
-			y = VI_MSTO[:fit_num]
+			mask = np.random.choice(range(len(V_MSTO)), size=fit_num, replace=False)
+			x = V_MSTO[mask]
+			y = VI_MSTO[mask]
 			signal = np.array([1]*fit_num)
 			noise = signal
 			#do vorbin
@@ -145,8 +148,9 @@ class utiles:
 			#Do giant branch
 			#Define number of stars used to generate vorbin based on TargetSN and bin_num
 			fit_num = GB_bin_num*targetSN**2
-			x = V_GB[:fit_num]
-			y = VI_GB[:fit_num]
+			mask = np.random.choice(range(len(V_GB)), size=fit_num, replace=False)
+			x = V_GB[mask]
+			y = VI_GB[mask]
 			signal = np.array([1]*fit_num)
 			noise = signal
 			#do vorbin
@@ -456,23 +460,24 @@ class resample(utiles):
 
 #this is similar to resample class but utilizing the fiducial isochrone generated from fidanka
 class resample_fidanka(utiles):
-	def read_input(self,obs_path,phot_path,fiducial_path):
-		#read M92 observed data
+	def read_input(self,obs_path,phot_path,fiducial_path,binary_path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
+		#read observed data
 		self.obs_data = pd.read_csv(obs_path)
+		self.obs_data = self.obs_data[(self.obs_data['v'] <= obs_v_max) & (self.obs_data['v'] >= obs_v_min) & (self.obs_data['vi'] <= obs_vi_max) & (self.obs_data['vi'] >= obs_vi_min)]
 		#read AS test error
 		self.dps_Ierr = []
 		self.dps_Verr = []
 		self.completeness_V = []
 		self.completeness_I = []
-		for i in range(80):
-			dp_Ierr = pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr'])
-			dp_Verr = pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr'])
+		for i in range(140):
+			dp_Ierr = pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr'])
+			dp_Verr = pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr'])
 			i_err, cdf = self.empirical_cdf(dp_Ierr['Ierr'].values)
 			self.dps_Ierr.append(interp1d(cdf, i_err, bounds_error=False, fill_value='extrapolate'))
 			v_err, cdf = self.empirical_cdf(dp_Verr['Verr'].values)
 			self.dps_Verr.append(interp1d(cdf, v_err, bounds_error=False, fill_value='extrapolate'))
-			self.completeness_V.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
-			self.completeness_I.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+			self.completeness_V.append(pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+			self.completeness_I.append(pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 		self.completeness_V = np.array(self.completeness_V)
 		self.completeness_I = np.array(self.completeness_I)
 		self.dps_Verr = np.array(self.dps_Verr)
@@ -484,10 +489,21 @@ class resample_fidanka(utiles):
 		self.Rad_bounds = np.sort(np.unique(df_I_bound['Rad'].values))
 		self.I_mag_bounds = np.sort(np.unique(df_I_bound['Mag'].values))
 		#read fiducial lines
-		fiducial = pd.read_csv(fiducial_path,names=['vi','v','c5','c95','perp'])
+		fiducial = pd.read_csv(fiducial_path,dtype=float)
 		self.V_fid = fiducial['v'].values
 		I_fid = fiducial['v'].values - fiducial['vi'].values
 		self.ff = interp1d(self.V_fid, I_fid, bounds_error=False, fill_value='extrapolate')
+		#read binary charts
+		binary_data = pd.read_csv(binary_path)
+		v_len = 600
+		q_len = 100
+		v = np.linspace(0,6,v_len)
+		q = np.linspace(0.5,1,q_len)
+		v_diff = binary_data['v_diff'].values.reshape(v_len,q_len)
+		vi_diff = binary_data['vi_diff'].values.reshape(v_len,q_len)
+		self.f_vdiff = RectBivariateSpline(v, q, v_diff)
+		self.f_vidiff = RectBivariateSpline(v, q, vi_diff)
+
 
 	#maginalized the completeness from the result of AS test. We assume the radius and magnitude are indepedent
 	def marginalize(self):
@@ -610,11 +626,23 @@ class resample_fidanka(utiles):
 		#sample v magitude and calculate i from the fiducial isochrone
 		v_iso = self.v_cdf(np.random.rand(sample_pt))
 		i_iso = self.ff(v_iso)
+		vi_iso = v_iso - i_iso
 		#sample radius
 		r_iso = self.r_cdf(np.random.rand(sample_pt))
 		#test generating binary from random sampling the fiducial isochrone
 		#make binaries (still working out how to make a binary)
-		# Binary_num = round(sample_pt*Binary_Fraction)
+		Binary_num = round(sample_pt*Binary_Fraction)
+		q_iso = 0.5 + np.random.rand(Binary_num)/2
+		#find the change 
+		v_diff = np.zeros(sample_pt)
+		i_diff = np.zeros(sample_pt)
+		vi_diff = np.zeros(sample_pt)
+		v_diff[:Binary_num] = self.f_vdiff(v_iso[:Binary_num] - (self.V_SGB - self.mag_cut), q_iso,grid=False)
+		vi_diff[:Binary_num] = self.f_vidiff(v_iso[:Binary_num] - (self.V_SGB - self.mag_cut), q_iso,grid=False)
+		i_diff =  v_diff - vi_diff
+		v_iso[:Binary_num] = v_iso[:Binary_num] + v_diff[:Binary_num]
+		vi_iso[:Binary_num] = vi_iso[:Binary_num] + vi_diff[:Binary_num]
+		i_iso[:Binary_num] = v_iso[:Binary_num] - vi_iso[:Binary_num]
 		# v_binary = []
 		# i_binary = []
 		# for i in range(Binary_num):
@@ -666,7 +694,7 @@ class resample_fidanka(utiles):
 		temp_i = i_iso + ierr
 		temp_vi = temp_v - temp_i
 		#combine all conditions
-		All_tests = (np.abs(ierr) < 0.08) & (np.abs(verr) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
+		All_tests = (ierr+i_diff < 0.08) & (ierr+i_diff > -0.08*1.5) & (verr+v_diff < 0.08) & (verr+v_diff > -0.08*1.5) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
 		#select points satisfied all conditions
 		good_v = temp_v[All_tests]
 		good_vi = temp_vi[All_tests]
@@ -691,44 +719,47 @@ class resample_fidanka(utiles):
 			df.to_csv(path,index=False)
 		return df
 
-	def calculate_chi2(self,Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path,start, end, write_vorbin,cmd_path,write_cmd):
+	def calculate_chi2(self,Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,vorbin_path,chi2_path,start, end, write_vorbin,cmd_path,write_cmd):
 		chi2 = []
 		for k in range(start, end):
 			print("Starting {}th resample".format(k))
 			df = self.resample(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,k,cmd_path,write_cmd)
 			total_pt = len(df)
 			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
-			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			x_gen, y_gen = self.generate_vorbin([V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB])
 			#reduce memory usage for matrix operations
 			XBar = np.float32(x_gen)
 			YBar = np.float32(y_gen)
 			v_32 = np.float32(df['v'].values)
-			vi_32 = np.float32(df['vi'].values*width_coeff)
+			vi_32 = np.float32(df['vi'].values*self.width_coeff)
 			#find standard bin count by search through all the theoretical data points
-			bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
+			bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
 			if write_vorbin == True:
 				#no age for resample
 				age = 0
 				self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
 			#fit observation data
 			obs_size = len(self.obs_data)
-			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
+			vi_32 = np.float32(self.obs_data['vi'].values*self.width_coeff)
 			v_32 = np.float32(self.obs_data['v'].values)
-			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
+			bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
 			#calculate chi2
-			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
+			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))/len(self.obs_data)])  
 		self.writeout_resample(chi2_path,start,end,chi2)
 
 
 
-	def __init__(self, GC_name, start, end, Binary_Fraction = 0.02, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000, pool= False):
+	def __init__(self, GC_name, start, end, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000, pool= False):
 		#define boundaris
 		if GC_name == 'M55':
+			self.V_SGB = 17.28
+			self.mag_cut = 3
+			Binary_Fraction = 0.04
 			obs_vi_max = 0.792
 			obs_vi_min = 0.462
 			obs_v_max = 19.28
 			obs_v_min = 15.296
-		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
+		self.width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#correct the difference between obs data and as test
 		if GC_name == 'M55':
 			self.AS_center = [3005.49976,2997.75391]
@@ -739,9 +770,10 @@ class resample_fidanka(utiles):
 		if GC_name == 'M55':
 			# repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
 			# resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
-			repo_path = '/home/mying/Desktop/Repositories/Age-of-GCs'
-			resample_path = "/home/mying/Desktop/{}_data/resample".format(GC_name)
+			repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
+			resample_path = "/home/mying/Desktop/ipynb/{}_data/resample".format(GC_name)
 		data_path = "{}/{}_data".format(repo_path, GC_name)
+		binary_path = "{}/{}_binary_chart.csv".format(data_path, GC_name)
 		photometry_folder = "{}/Photometry".format(repo_path)
 		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
 		vorbin_path = "{}/vorbin".format(resample_path )
@@ -752,6 +784,7 @@ class resample_fidanka(utiles):
 		fiducial_path = "{}/fiducial_lines.csv".format(data_path)
 		cdf_path = "{}/cdf".format(resample_path)
 		#check those directories exist
+		self.check_file(binary_path)
 		self.check_file(photometry_path)
 		self.check_file(fiducial_path)
 		self.check_file(as_test_path)
@@ -767,7 +800,7 @@ class resample_fidanka(utiles):
 			self.MSTO_cut = 17.0
 			self.GB_cut = 18.0
 		#read obs data and photometry data
-		self.read_input(obs_path,photometry_path,fiducial_path)
+		self.read_input(obs_path,photometry_path,fiducial_path,binary_path,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
 		#check if cdf files exits
 		if os.path.exists("{}/marginal_r.csv".format(cdf_path)) == False:
 			self.get_cdf(cdf_path,as_test_path)
@@ -776,16 +809,16 @@ class resample_fidanka(utiles):
 		self.read_marginals(cdf_path)
 		#run resample
 		if pool == False: 
-			self.calculate_chi2(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start, end, write_vorbin,cmd_path,write_cmd)
+			self.calculate_chi2(Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,vorbin_path,chi2_path, start, end, write_vorbin,cmd_path,write_cmd)
 		else:
 			from multiprocessing import Pool
-			MP_pool = Pool(pool)
 			paramlist = []
 			total_resample = end - start
 			batch_num = total_resample/10
 			i = 0
 			while i < batch_num:
-				paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start + i*10, start + (i+1)*10, write_vorbin,cmd_path,write_cmd))
+				paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,vorbin_path,chi2_path, start + i*10, start + (i+1)*10, write_vorbin,cmd_path,write_cmd))
 				i += 1
-			paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,width_coeff,vorbin_path,chi2_path, start + (i-1)*10, end, write_vorbin,cmd_path,write_cmd))
-			MP_pool.starmap(self.calculate_chi2, paramlist)
+			paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,vorbin_path,chi2_path, start + (i-1)*10, end, write_vorbin,cmd_path,write_cmd))
+			with Pool(pool, initializer=np.random.seed) as MP_pool:
+				MP_pool.starmap(self.calculate_chi2, paramlist)
