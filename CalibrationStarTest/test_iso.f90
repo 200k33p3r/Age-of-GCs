@@ -9,19 +9,20 @@ program test_iso
 
 
    !  Variable Declarations
-  integer, parameter :: nstar = 2   !number of calibrating stars
+!  integer, parameter :: nmaxstar = 10   !number of calibrating stars
   integer, parameter :: nmaxiso = 100 !maxnumber of ages in isochrone 
-
-  real :: calF606(nstar), calF68(nstar),sigF606(nstar),sigF68(nstar)
 
   real, dimension (:), allocatable :: f606w,f68,sigmaDist, xs, ys
   real, dimension (:), allocatable :: xx,yy
+  real, dimension (:), allocatable :: calF606, calF68
+  real, dimension (:), allocatable :: sigF606, sigF68
 
   integer :: i,j,npts,jminarr(1),nall,ieof,ii, &
-       jmin,nage
+       jmin,nage, nstar
   real :: x1,x2, slope,intcpt,mindist,sumdist, &
        isoage,pslope, minchi2,chi2(nmaxiso)
-  character(len=256) :: filename
+  character(len=256) :: filename, GC_name, &
+       feh, mc_num, data_dir,cali_file
 
   character(len=11) :: chkstr="feh230isol."    ! use to extract MC number from isochorne filename
   character(len=5) :: mcnumber
@@ -31,30 +32,59 @@ program test_iso
   
   integer :: n_args, indxmcnum
  
-  data calF606 / 5.78667, 6.04062 /!absolute F606W mag of calibraters
-  data calF68  / 0.566, 0.601 / !F606W-F814W color of calibraters
-  data sigF606 / 0.00258611, 0.00373387 / !uncertainty in abs. mag
-  data sigF68 / 0.0023, 0.0054 / !uncertainty in color of calibrators
+  ! data calF606 / 5.78667, 6.04062 /!absolute F606W mag of calibraters
+  ! data calF68  / 0.566, 0.601 / !F606W-F814W color of calibraters
+  ! data sigF606 / 0.00258611, 0.00373387 / !uncertainty in abs. mag
+  ! data sigF68 / 0.0023, 0.0054 / !uncertainty in color of calibrators
   
 !  read in file name  from command line
   n_args = command_argument_count()
-  if (n_args /= 1) then
-     write(*,*)'Usage: ./iso_sigma filename'
+  if (n_args /= 4) then
+     write(*,*)'Usage: ./iso_sigma GC_name feh mc_num data_dir'
      stop
   end if
 
-  call get_command_argument(1,filename)
-  filename = trim(filename)
+  call get_command_argument(1,GC_name)
+  GC_name = trim(GC_name)
 
-!figure out the MC index number and find the corrosponding var file and read in the variables
-!  write(*,*) filename
-  indxmcnum = index(filename,chkstr)
-!  write(*,*)chkstr, indxmcnum
-  mcnumber = filename(indxmcnum+11:indxmcnum+16)
-!  write(*,*)"number: ", mcnumber
+  call get_command_argument(2,feh)
+  feh = trim(feh)
 
-  varfile = "./var/varfeh230."//mcnumber
-!  write(*,*) "varfile: ", varfile
+  call get_command_argument(3,mc_num)
+  mc_num = trim(mc_num)
+
+  call get_command_argument(4,data_dir)
+  data_dir = trim(data_dir)
+
+! read in calibration stars
+  cali_file = data_dir//GC_name//"_data/Calibration_stars.csv"
+  open(unit=26, file = cali_file, status='old')
+  do
+     read(26,*) nstar
+     if (nstar < 1) then
+        write(*,*)'No calibration stars found'
+        stop
+     end if
+     allocate (calF606(nstar), calF68(nstar), &
+             sigF606(nstar), sigF68(nstar))
+     do i = 1, nstar
+        read(26,*) calF606(i) calF68(i) sigF606(i) sigF68(i)
+     enddo
+  enddo
+  close(26)
+
+! !figure out the MC index number and find the corrosponding var file and read in the variables
+! !  write(*,*) filename
+!   indxmcnum = index(filename,chkstr)
+! !  write(*,*)chkstr, indxmcnum
+!   mcnumber = filename(indxmcnum+11:indxmcnum+16)
+! !  write(*,*)"number: ", mcnumber
+
+!   varfile = "./var/varfeh230."//mcnumber
+! !  write(*,*) "varfile: ", varfile
+
+! read in var file
+  varfile = data_dir//GC_name//"_data/"//GC_name//"_var/varfeh"//feh//"."//mc_num
 
   open(unit=25, file=varfile)
   do i = 1,20
@@ -66,9 +96,10 @@ program test_iso
   close(25)
 
  !read in isochrone of specified age
+  iso_file =  data_dir//GC_name//"_data/"//GC_name//"_iso/feh"//feh//"l."//mc_num
 
   nage = 0 
-  open (unit=4, file = filename, status='old')
+  open (unit=4, file = iso_file, status='old')
   do 
      read(4,*,iostat=ieof)    !skip header lines
      if (ieof < 0 ) exit
@@ -138,6 +169,7 @@ program test_iso
   
      deallocate (f606w,f68,sigmaDist,xs,ys)
      deallocate (xx,yy)
+     deallocate (calF606,calF68,sigF606,sigF68)
 
   enddo
   !  write(*,*)(chi2(i),i=1,nage)
