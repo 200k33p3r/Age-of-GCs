@@ -24,11 +24,11 @@ program test_iso
   character(len=256) :: filename, GC_name, &
        feh, mc_num, data_dir,cali_file
 
-  character(len=11) :: chkstr="feh230isol."    ! use to extract MC number from isochorne filename
+ ! character(len=11) :: chkstr="feh230isol."    ! use to extract MC number from isochorne filename
   character(len=5) :: mcnumber
   character(len=21) :: varfile
-  real, dimension(20) :: varnums
-  integer :: varcolour
+  real, dimension(21) :: varnums
+!  integer :: varcolour
   
   integer :: n_args, indxmcnum
  
@@ -87,11 +87,11 @@ program test_iso
   varfile = data_dir//GC_name//"_data/"//GC_name//"_var/varfeh"//feh//"."//mc_num
 
   open(unit=25, file=varfile)
-  do i = 1,20
+  do i = 1,21
      read(25,*)varnums(i)
 !     write(*,*)varnums(i)
   enddo
-  read(25,*)varcolour
+!  read(25,*)varcolour
 !  write(*,*)varcolour
   close(25)
 
@@ -174,7 +174,7 @@ program test_iso
   enddo
   !  write(*,*)(chi2(i),i=1,nage)
   minchi2 = minval(chi2(1:nage))
-  write(*,'(F10.3,1x,20F9.6,I2,1x,A5)')minchi2,(varnums(i), i=1,20), varcolour, mcnumber
+  write(*,'(F10.3,1x,21F9.6,I2,1x,A5)')minchi2,(varnums(i), i=1,21), mcnumber
 
   close(4)
   
