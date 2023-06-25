@@ -694,7 +694,7 @@ class resample_fidanka(utiles):
 		temp_i = i_iso + ierr
 		temp_vi = temp_v - temp_i
 		#combine all conditions
-		All_tests = (ierr+i_diff < 0.08) & (ierr+i_diff > -0.08*1.5) & (verr+v_diff < 0.08) & (verr+v_diff > -0.08*1.5) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
+		All_tests = (np.abs(ierr+i_diff) < 0.08) & (np.abs(verr+v_diff) < 0.08) & (temp_v > v_min) & (temp_v < v_max) & (temp_vi > vi_min) & (temp_vi < vi_max) & v_result & i_result
 		#select points satisfied all conditions
 		good_v = temp_v[All_tests]
 		good_vi = temp_vi[All_tests]

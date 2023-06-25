@@ -150,6 +150,11 @@ c         read(itrk,*)
 c         read(itrk,*)
 c ****** end MC changes
 
+c skip first three lines
+         READ(itrk,*)
+         READ(itrk,*)
+         READ(itrk,*)
+
 C read in the standard track header line
          READ(itrk,55)SMASS(i), XENV,ZENV,AFE2,CMIXL
  55      FORMAT(4X,F5.3,3x,E10.4,3x,E10.4,18x,F5.2,6x,F6.4)
@@ -2178,6 +2183,12 @@ c         read(itrk,*)
 c     ****** end MC changes
 c         read(itrk,'(a80)')hd1
 c         write(*,'(a80)')hd1
+
+c skip first three lines
+         READ(itrk,*)
+         READ(itrk,*)
+         READ(itrk,*)
+
          READ(itrk,55)smass, XENV,ZENV,AFE2,CMIXL
 c **** MC changed format
  55      FORMAT(4X,F5.3,3x,E10.4,3x,E10.4,18x,F5.2,6x,F6.4)

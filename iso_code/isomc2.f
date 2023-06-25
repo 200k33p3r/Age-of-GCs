@@ -1250,7 +1250,7 @@ c****MY read MC parameters from Varfiles
       read(unit=75, fmt=*) FGRZ
       read(unit=75, fmt=*) KTTAU
       read(unit=75, fmt=*) ALPHAE
-      read(unit=75, fmt=*) 
+      read(unit=75, fmt=*) ALPHAC
       read(unit=75, fmt=*) SSTANDARD(1)
       read(unit=75, fmt=*) SSTANDARD(2)
       read(unit=75, fmt=*) SSTANDARD(3)
@@ -1264,6 +1264,10 @@ c****MY read MC parameters from Varfiles
       read(unit=75, fmt=*) plascoef
       read(unit=75, fmt=*) cocoef
       close(unit=75)
+c skip first three lines
+      READ(TRACK,*)
+      READ(TRACK,*)
+      READ(TRACK,*)
 C read in the standard track header line
       READ(TRACK,55)SMASS, XENV,ZENV,AFE,CMIXL
  55   FORMAT(4X,F5.3,3x,E10.4,3x,E10.4,18x,F5.2,6x,F6.4)
