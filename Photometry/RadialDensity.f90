@@ -10,10 +10,6 @@ program RadialDensity
   real, parameter :: xguess = 3000
   real, parameter :: yguess = 3000
   real, parameter :: radius = 200  !200 pixels from guess center
-  real, parameter :: Vmax = 20.779
-  real, parameter :: Vmin = 13.797
-  real, parameter :: VImin = 0.463
-  real, parameter :: VImax = 0.916
   integer :: Nstars,nfit,i,j,id,nage
   REAL, dimension(:),allocatable :: xx,yy,fit_id
   REAL, dimension(:),allocatable :: xt,yt,vt,vit,dist2,idlist
@@ -42,11 +38,8 @@ program RadialDensity
      read(4,*) id, vt(i), t1, t2, t3, vit(i), t4, xt(i), yt(i)
      dist2(i) = (xt(i) - xguess)**2 + (yt(i) -yguess)**2
      idlist(i) = id
-     if( dist2(i) <= rad2 .and. vt(i) <= Vmax .and. &
-          vt(i) >= Vmin .and. vit(i) >= VImin .and. &
-          vit(i) <= VImax ) nfit = nfit + 1
-     if( vt(i) <= Vmax .and.  vt(i) >= Vmin  &
-         .and. vit(i) >= VImin .and. vit(i) <= VImax ) nage = nage + 1
+     if( dist2(i) <= rad2) nfit = nfit + 1
+     nage = nage + 1
     enddo
    close(4)
    write(*,*)'Number of stars close to center:', nfit
@@ -54,9 +47,7 @@ program RadialDensity
    allocate (xx(nfit),yy(nfit))
    j = 0
    do i = 1,Nstars
-      if( dist2(i) <= rad2 .and. vt(i) <= Vmax .and. &
-          vt(i) >= Vmin .and. vit(i) >= VImin .and. &
-          vit(i) <= VImax ) then
+      if( dist2(i) <= rad2) then
          j = j + 1
          xx(j) = xt(i)
          yy(j) = yt(i)
@@ -70,12 +61,9 @@ program RadialDensity
    allocate (dist2(nage),fit_id(nage))
    j = 0
    do i = 1, Nstars
-      if( vt(i) <= Vmax .and.  vt(i) >= Vmin  &
-           .and. vit(i) >= VImin .and. vit(i) <= VImax )  then
-         j = j + 1
-         dist2(j) = sqrt( (xt(i)-xcen)**2 + (yt(i) - ycen)**2)
-         fit_id(j) = idlist(i)
-      endif
+      j = j + 1
+      dist2(j) = sqrt( (xt(i)-xcen)**2 + (yt(i) - ycen)**2)
+      fit_id(j) = idlist(i)
    enddo   
    call quicksort(dist2)
    open(unit=20, file ='Distance.dat')

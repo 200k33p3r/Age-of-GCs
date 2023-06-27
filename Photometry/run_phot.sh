@@ -19,7 +19,7 @@ gfortran -c qsort.f90
 gfortran RadialDensity.f90 qsort.o -o RadialDensity
 
 ./PhotoPropI 99999 ../../M55_data/M55artstars.dat
-./RadialDensity 13361 ../../M55_data/M55_fitstars.dat
+./RadialDensity 13205 ../../M55_data/M55_fitstars.dat
 
 ./sort.sh
 

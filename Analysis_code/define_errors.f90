@@ -3,7 +3,7 @@ MODULE define_errors
   implicit none
   ! define the variables needed for the distribution function of  photometric errors
 
-  real, dimension(2), parameter :: SGBartStar = [-13.77,-13.446]  !magnitude of SGB in the
+  real, dimension(2), parameter :: SGBartStar = [-13.7,-13.553]  !magnitude of SGB in the
   !artifical stars
   integer, parameter :: nfilter = 2   !number of filters for the HESS diagram
   

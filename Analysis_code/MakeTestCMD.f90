@@ -157,8 +157,8 @@ program MakeFakeCMD
         call findFitPoints(isoV,isoVI,niso,Vsgb,Isgb, indxmin,indxmax,fitindxmin,fitindxmax)
    !     write(*,*)'in main:',indxmin,indxmax,isomass(indxmin),isomass(indxmax), Vsgb
 
-        minmass = isomass(fitindxmin)
-        maxmass = isomass(fitindxmax)
+        minmass = isomass(indxmin)
+        maxmass = isomass(indxmax)
    !     write(*,*)'age, min/max mass:',age, minmass,maxmass
         m1 = maxmass**(IMFslope+1.) - minmass**(IMFslope+1.)
         m2 =  minmass**(IMFslope+1.)
@@ -170,10 +170,10 @@ program MakeFakeCMD
            call random_number(xx)
            mass(i) = ( m1*xx + m2 )**powmass
            !interpolate in isochrone mass to get V and VI of simulated star
-           call lininterp(isomass(fitindxmin:fitindxmax),isoV(fitindxmin:fitindxmax), &
-                mass(i),Vtemp,fitindxmax-fitindxmin)
-           call lininterp(isomass(fitindxmin:fitindxmax),isoVI(fitindxmin:fitindxmax), &
-                mass(i),VItemp,fitindxmax-fitindxmin)
+           call lininterp(isomass(indxmin:indxmax),isoV(indxmin:indxmax), &
+                mass(i),Vtemp,indxmax-indxmin)
+           call lininterp(isomass(indxmin:indxmax),isoVI(indxmin:indxmax), &
+                mass(i),VItemp,indxmax-indxmin)
            Itemp = Vtemp - VItemp
    !        write(*,'(I6,2x,F11.4,4F10.5)')i,rdist(i),mass(i),VV(i),VI(i),II(i)
            
@@ -297,7 +297,7 @@ subroutine wrtout(vv,ii,age,IMFslope, binaryfraction, npt,mcnumber)
   write(25,'("#Total_stars  MassSlope BinaryFraction")' )
   write(25,'(A1,1x,i11,3x,2F9.4)' )  &
        "#", npt, IMFslope, binaryfraction
-  write(25,'("#  F606W            F606-F814 " )' )
+  write(25,'("#  F606W-F814            F606 " )' )
 !  do j=1,nhy
 !     do i = 1,nhx
 !        write(25,*) xhist(i),yhist(j),hist(i,j)
