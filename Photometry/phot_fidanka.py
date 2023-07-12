@@ -14,7 +14,7 @@ class phot:
     #read in fitstars and fiducial isochrone generated from the fidanka package
     def read_input(self, data_path, iso_path):
         fitstars = pd.read_csv(data_path)
-        iso = pd.read_csvv(iso_path)
+        iso = pd.read_csv(iso_path)
         v_star = fitstars['v'].values
         i_star = fitstars['i'].values
         v_iso = iso['v'].values
@@ -48,7 +48,7 @@ class phot:
     #write the fiducial AS test
     def write_out(self, fiducial_AS_path, v_star, i_star, out_v, out_i, x_star, y_star):
         data = np.vstack((x_star, y_star, v_star - self.V_diff, i_star - self.I_diff, x_star, y_star, out_v - self.V_diff, out_i - self.I_diff)).T
-        df = pd.DataFrame(data=data, colums=['InputX','InputY','InputF606W','InputF814W','OutputX','OutputY','OutputF606W','OutputF814W'])
+        df = pd.DataFrame(data=data, columns=['InputX','InputY','InputF606W','InputF814W','OutputX','OutputY','OutputF606W','OutputF814W'])
         df.to_csv(fiducial_AS_path,index=False,sep=' ')
     
     def __init__(self,GC_name):

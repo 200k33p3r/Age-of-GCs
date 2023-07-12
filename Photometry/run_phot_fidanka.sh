@@ -22,7 +22,7 @@ gfortran PhotoPropI.f90 define_mags.o -o PhotoPropI
 gfortran -c qsort.f90
 gfortran RadialDensity.f90 qsort.o -o RadialDensity
 
-AS_path=../../${GC_name}_data/${GC_name}artstars.dat
+AS_path=../../${GC_name}_data/${GC_name}_fiducial_artstars.dat
 obs_path=../../${GC_name}_data/${GC_name}_fitstars.dat
 
 AS_stars=$((`wc --lines < $AS_path` - 1))
