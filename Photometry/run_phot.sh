@@ -24,7 +24,7 @@ obs_path=../../${GC_name}_data/${GC_name}_fitstars.dat
 AS_stars=$((`wc --lines < $AS_path` - 1))
 obs_stars=$((`wc --lines < $obs_path` - 1))
 
-./PhotoPropI $AS_stars $AS_path
+./PhotoPropI $AS_stars $AS_path True
 ./RadialDensity $obs_stars $obs_path
 
 ./sort.sh

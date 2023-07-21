@@ -19,20 +19,22 @@ program PhotoPropI
   !magnitude between short and long exposures, first F606W and then F814W!
 !  real, parameter :: Ishort_long = -13.9
   integer, parameter :: Nmagbins = 8 !totalnumber of mag bins (must be even)
-  integer, parameter :: Nradbins= 10 !number of radial bins
+  integer, parameter :: Nradbins= 2 !number of radial bins
   integer :: Nstars,nfitI,nfitV,nfit,i,j,id,k
   real, dimension(:), allocatable :: vti,iiti, vto,iito
   real :: ii_in,ii_out,xcenter,ycenter
   real :: i1,i2,i3,i4
+  logical :: L_AS
  
   character(len=40) :: filename
   character(len=10) :: cNstars
+  character(len=10) :: cL_AS
   integer :: n_args
   
   !read in Sample Size & filename from command line
   n_args = command_argument_count()
-  if (n_args /= 2) then
-     write(*,*)'Usage: ./a.out num_stars filename'
+  if (n_args /= 3) then
+     write(*,*)'Usage: ./a.out num_stars filename L_AS'
      stop
   end if
   call get_command_argument(1,cNstars)
@@ -40,6 +42,13 @@ program PhotoPropI
   read(cNstars,*) Nstars
   call get_command_argument(2,filename)
   filename = trim(filename)
+  call get_command_argument(3,cL_AS)
+  cL_AS = trim(cL_AS)
+  if (cL_AS == 'True') then
+      L_AS = .True.
+  else
+      L_AS = .False.
+  endif
   allocate (xti(Nstars),yti(Nstars),vti(Nstars), &
        iiti(Nstars), xto(Nstars),yto(Nstars), vto(Nstars), &
        iito(Nstars) )
@@ -77,7 +86,7 @@ program PhotoPropI
 ! find completenss and magnitude error as a function of distance from the 
 ! cluster center and magnitude.  The routine  sets bin boundaries, and
 ! outputs the results.
-      call GetPhotProp(short_long(k), Nradbins,Nmagbins,k)
+      call GetPhotProp(short_long(k), Nradbins,Nmagbins,k, L_AS)
          
       deallocate (xin,yin,magin,xout,yout, magout, &
            dist, recovered )
@@ -111,7 +120,7 @@ program PhotoPropI
    return
  end subroutine instars
  ! -----------------------------------------------------------------
- subroutine GetPhotProp(vcut, Nradbins,Nmagbins,kin)
+ subroutine GetPhotProp(vcut, Nradbins,Nmagbins,kin,L_AS)
    use define_mags
    implicit none
    real,intent(IN) :: Vcut
@@ -124,40 +133,58 @@ program PhotoPropI
    real :: maxdist,width1,width2,minv,maxv,widthrad
    integer, dimension(Nradbins,Nmagbins) :: ngood,nbad
    real, dimension(Nradbins,Nmagbins) :: sigV
-   real, dimension(Nradbins,Nmagbins,900) :: histVerr
+   real, dimension(Nradbins,Nmagbins,2000) :: histVerr
    character(len=30) :: filename1
    character(len=16) :: filename2
    character(len=40),parameter,dimension(2) :: startfile =["Verr", "Ierr"]
+   logical :: L_AS
    npt = size(dist)
    write(*,*)'in GetPhotProp npt:', npt
    maxdist = maxval(dist)
 !   write(*,*)maxdist
-   widthrad = maxdist/Nradbins
-   binrad(1) = widthrad*1.5
-   binrad(Nradbins) = maxdist
-   maxdist = maxdist- 3.0*widthrad
-   widthrad = maxdist/Nradbins
-   do i = 2,Nradbins-1
-      binrad(i) = binrad(i-1) + widthrad
-   enddo
+   if (Nradbins .ne. 2 ) then
+      widthrad = maxdist/Nradbins
+      binrad(1) = widthrad*1.5
+      binrad(Nradbins) = maxdist
+      maxdist = maxdist- 3.0*widthrad
+      widthrad = maxdist/Nradbins
+      do i = 2,Nradbins-1
+         binrad(i) = binrad(i-1) + widthrad
+      enddo
+   else
+      widthrad = maxdist/Nradbins
+      binrad(1) = widthrad
+      binrad(2) = maxdist
+   endif
 !   do i = 1, Nradbins
 !      write(*,*)'i,binrad:',i,binrad(i)
 !   enddo
-   if (mod(Nmagbins,2) .ne. 0 ) then
-      write(*,*)'Nmagbins must be an even number'
-      stop
-   endif
    minv = minval(magin)
    maxv = maxval(magin)
-   width1 = (Vcut - minv)/(Nmagbins)*2.0
- !  write(*,*)'min,maxV,Vcut:', minv,maxv,Vcut
-   do i = 1, Nmagbins/2
-      binmag(i) = minv + i*width1
-   enddo
-   width2 = (maxv - Vcut)/(Nmagbins)*2.0
-   do i = Nmagbins/2+1,Nmagbins
-      binmag(i) = Vcut + (i- Nmagbins/2)*width2
-   enddo
+   !when L_AS is False, we want to use only 1 bin for short exposure
+   !as there is very few bright stars
+   if (L_AS) then
+      if (mod(Nmagbins,2) .ne. 0 ) then
+         write(*,*)'Nmagbins must be an even number'
+         stop
+      endif
+      width1 = (Vcut - minv)/(Nmagbins)*2.0
+   !  write(*,*)'min,maxV,Vcut:', minv,maxv,Vcut
+      do i = 1, Nmagbins/2
+         binmag(i) = minv + i*width1
+      enddo
+      width2 = (maxv - Vcut)/(Nmagbins)*2.0
+      do i = Nmagbins/2+1,Nmagbins
+         binmag(i) = Vcut + (i- Nmagbins/2)*width2
+      enddo
+   else
+      width1 = (Vcut - minv)
+      binmag(1) = minv
+      width2 = (maxv - Vcut)/(Nmagbins - 1)
+      do i = 2, Nmagbins
+         binmag(i) = binmag(1) + (i-1)*width2
+      enddo
+   endif
 !   do i = 1, Nmagbins
 !      write(*,*)'i,magbin:',i,binmag(i)
 !   enddo
@@ -174,10 +201,19 @@ program PhotoPropI
 !         write(*,*)indxrad,dist(i),binrad(indxrad)
       endif
       if (magin(i) <= vcut ) then
-         indxV = int( (magin(i) - minv)/width1 ) + 1
+         if (L_AS) then
+            indxV = int( (magin(i) - minv)/width1 ) + 1
+         else
+            indxV = 1
+         endif
       else
-         indxV = int( (magin(i) - vcut)/width2 ) +  Nmagbins/2 + 1
-         if(indxV > Nmagbins ) indxV=Nmagbins 
+         if (L_AS) then
+            indxV = int( (magin(i) - vcut)/width2 ) +  Nmagbins/2 + 1
+            if(indxV > Nmagbins ) indxV=Nmagbins 
+         else
+            indxV = int( (magin(i) - vcut)/width2 ) +  2
+            if(indxV > Nmagbins ) indxV=Nmagbins
+         endif
       endif
 !           write(*,*) magin(i),binmag(indxV),indxV
       if(recovered(i) ) then
