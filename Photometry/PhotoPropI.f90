@@ -133,7 +133,7 @@ program PhotoPropI
    real :: maxdist,width1,width2,minv,maxv,widthrad
    integer, dimension(Nradbins,Nmagbins) :: ngood,nbad
    real, dimension(Nradbins,Nmagbins) :: sigV
-   real, dimension(Nradbins,Nmagbins,2000) :: histVerr
+   real, dimension(Nradbins,Nmagbins,20000) :: histVerr
    character(len=30) :: filename1
    character(len=16) :: filename2
    character(len=40),parameter,dimension(2) :: startfile =["Verr", "Ierr"]
