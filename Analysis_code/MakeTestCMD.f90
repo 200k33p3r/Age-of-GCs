@@ -496,7 +496,7 @@ end subroutine findFitPoints
   read(30,*)
 !  rewind(30)
 
-  nmaxstars = 750
+  nmaxstars = 2000
   allocate ( nhist(Nbinrad,Nbinmag,nfilter), completness (Nbinrad,Nbinmag,nfilter) , &
        binrad(Nbinrad,nfilter), binmag(Nbinmag,nfilter) )
   allocate( cdfy_photerrors(nmaxstars,Nbinrad,Nbinmag,nfilter) )
@@ -532,7 +532,7 @@ end subroutine findFitPoints
 !     write(*,*) 'Maximum number of stars in a bin: ', nmaxstars
      do k = 1,Nbinmag
         do j = 1,Nbinrad
-           iopen = (k-1)*10 + j
+           iopen = (k-1)*Nbinrad + j
 !        write(*,*) 'iopen:', iopen
            write(filename1, '(A17,I0.3,A5)') startfile(ifilter), iopen,"s.dat"
 !           filename1 = trim(filename1)

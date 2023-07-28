@@ -37,7 +37,9 @@ class sCMD:
 		if GC_name == 'M55':
 			self.feh=190
 			#binary from Milone 2012 A&A 540, A16 (2012)
-			self.binary=0.04
+			#self.binary=0.04
+			#binaries are already included in the phonetric error
+			self.binary=0.00
 		self.mc_num = str(mc_num)
 		if float(age) < 10000:
 			self.age = '0'+str(age)
