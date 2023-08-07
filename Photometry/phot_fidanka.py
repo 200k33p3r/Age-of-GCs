@@ -59,7 +59,8 @@ class phot:
         if GC_name == 'M55':
             # repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
             # resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
-            repo_path = '/home/mying/Desktop/Repositories/Age-of-GCs'
+            cwd = os.getcwd()
+            repo_path = os.path.abspath(os.path.join(cwd, os.pardir))
         data_path = "{}/{}_data".format(repo_path, GC_name)
         photometry_folder = "{}/Photometry".format(repo_path)
         photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
