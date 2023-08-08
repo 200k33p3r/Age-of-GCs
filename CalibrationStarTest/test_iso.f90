@@ -22,11 +22,10 @@ program test_iso
   real :: x1,x2, slope,intcpt,mindist,sumdist, &
        isoage,pslope, minchi2,chi2(nmaxiso)
   character(len=256) :: filename, GC_name, &
-       feh, mc_num, data_dir,cali_file
+       feh, mc_num, data_dir,cali_file,iso_file,varfile
 
  ! character(len=11) :: chkstr="feh230isol."    ! use to extract MC number from isochorne filename
   character(len=5) :: mcnumber
-  character(len=21) :: varfile
   real, dimension(21) :: varnums
 !  integer :: varcolour
   
@@ -51,26 +50,26 @@ program test_iso
   feh = trim(feh)
 
   call get_command_argument(3,mc_num)
-  mc_num = trim(mc_num)
+  mcnumber = trim(mc_num)
 
   call get_command_argument(4,data_dir)
   data_dir = trim(data_dir)
 
 ! read in calibration stars
-  cali_file = data_dir//GC_name//"_data/Calibration_stars.csv"
+  cali_file = trim(data_dir)//trim(GC_name)//"_data/Calibration_stars.csv"
   open(unit=26, file = cali_file, status='old')
-  do
-     read(26,*) nstar
-     if (nstar < 1) then
-        write(*,*)'No calibration stars found'
-        stop
-     end if
-     allocate (calF606(nstar), calF68(nstar), &
-             sigF606(nstar), sigF68(nstar))
-     do i = 1, nstar
-        read(26,*) calF606(i) calF68(i) sigF606(i) sigF68(i)
-     enddo
-  enddo
+   read(26,*) nstar
+   if (nstar < 1) then
+      write(*,*)'No calibration stars found'
+      stop
+   end if
+   allocate (calF606(nstar), calF68(nstar), &
+            sigF606(nstar), sigF68(nstar))
+   !skip header lines
+   read(26,*) 
+   do i = 1, nstar
+      read(26,*) calF606(i),calF68(i),sigF606(i),sigF68(i)
+   enddo
   close(26)
 
 ! !figure out the MC index number and find the corrosponding var file and read in the variables
@@ -84,7 +83,7 @@ program test_iso
 ! !  write(*,*) "varfile: ", varfile
 
 ! read in var file
-  varfile = data_dir//GC_name//"_data/"//GC_name//"_var/varfeh"//feh//"."//mc_num
+  varfile = trim(data_dir)//trim(GC_name)//"_data/"//trim(GC_name)//"_var/varfeh-"//trim(feh)//"."//trim(mc_num)
 
   open(unit=25, file=varfile)
   do i = 1,21
@@ -96,7 +95,7 @@ program test_iso
   close(25)
 
  !read in isochrone of specified age
-  iso_file =  data_dir//GC_name//"_data/"//GC_name//"_iso/feh"//feh//"l."//mc_num
+  iso_file =  trim(data_dir)//trim(GC_name)//"_data/"//trim(GC_name)//"_iso/feh"//trim(feh)//"l."//trim(mc_num)
 
   nage = 0 
   open (unit=4, file = iso_file, status='old')
@@ -138,10 +137,12 @@ program test_iso
         endif
         if (yy(j) < 5.0) exit
      enddo
-
      sumdist = 0.0
      do i = 1,nstar
      !put into sigma space
+     !write(*,*) f606w,f68
+     !write(*,*) calF606(i),calF68(i),sigF606(i), sigF68(i)
+     !write(*,*) xs,ys,npts
         call sigma(f606w,f68,calF606(i),calF68(i),sigF606(i), &
                 sigF68(i),xs,ys,sigmaDist,npts)
         
@@ -151,17 +152,19 @@ program test_iso
         jmin = jminarr(1)
 !           write(*,*)'age, jmin:',isoage,jmin,jminarr(1),npts
         if (jmin < 2 .or. jmin > npts - 1 ) then
-           write(*,*) trim(filename) ,isoage, "bad Jmin", jmin,npts
-           stop
-        endif
-        slope = (ys(jmin + 1) - ys(jmin - 1 ) ) / &
-             (xs(jmin + 1) - xs(jmin - 1) )
-        intcpt = ys(jmin + 1) - slope*xs(jmin + 1 )
+           !write(*,*) trim(filename) ,isoage, "bad Jmin", jmin,npts
+           !stop
+           mindist = abs(sigmaDist(jmin))
+        else
+           slope = (ys(jmin + 1) - ys(jmin - 1 ) ) / &
+                (xs(jmin + 1) - xs(jmin - 1) )
+           intcpt = ys(jmin + 1) - slope*xs(jmin + 1 )
  !now that we have an equation for our the isoline in sigma space
  !geometric formulae for the minimum distance from the origin
  ! to a straight line
-        mindist = abs( intcpt) / sqrt(slope*slope + 1.0)
+           mindist = abs( intcpt) / sqrt(slope*slope + 1.0)
 !           write(*,*)isoage,i,mindist
+        endif
         sumdist = sumdist + mindist
      enddo
 !     write(*,*)isoage,sumdist,MCrunNumber,filename
@@ -169,12 +172,13 @@ program test_iso
   
      deallocate (f606w,f68,sigmaDist,xs,ys)
      deallocate (xx,yy)
-     deallocate (calF606,calF68,sigF606,sigF68)
 
   enddo
   !  write(*,*)(chi2(i),i=1,nage)
+  deallocate (calF606,calF68,sigF606,sigF68)
   minchi2 = minval(chi2(1:nage))
-  write(*,'(F10.3,1x,21F9.6,I2,1x,A5)')minchi2,(varnums(i), i=1,21), mcnumber
+  !write(*,'(F10.3,1x,21F9.6,1x,A5)')minchi2,(varnums(i), i=1,21), mcnumber
+  write(*,'(F10.3,1x,A5)')minchi2, mcnumber
 
   close(4)
   
