@@ -65,7 +65,7 @@ C allow for possiblilty of alpha enhancement
          errsumz = errsumz + erra(i)**2
       end do
       errsumz = sqrt(errsumz)
-      write(*,140)sumz
+c      write(*,140)sumz
   140 format(F12.9)
       end subroutine gs98getz
 C
