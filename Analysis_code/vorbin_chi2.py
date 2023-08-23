@@ -323,10 +323,14 @@ class chi2(utiles):
 	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30):
 		#define distance modulus and reddening ranges
 		if GC_name == 'M55':
-			dm_max = 14.40
-			dm_min = 13.40
-			red_max = 0.20
-			red_min = 0.00
+			# dm_max = 14.40
+			# dm_min = 13.40
+			# red_max = 0.20
+			# red_min = 0.00
+			dm_max = 14.1
+			dm_min = 13.8
+			red_max = 0.15
+			red_min = 0.08
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
