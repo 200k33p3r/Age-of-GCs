@@ -2,7 +2,9 @@
 #using theoretical isochrones with radius, mass,
 #and luminosity values to fit eclipsing binaries.
 
+import warnings
 import numpy as np
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import os
 from typing import Union
@@ -213,7 +215,25 @@ class utile:
             iso.close()
             df = pd.DataFrame(data,index=arrays)
         return mc_num, df, age_list
-
+    
+    def resample_stars(self, df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err):
+        #given the information about an isochrone, and the observed binaries, we redraw stars from the theoretical isochrone with know uncertainty.
+        num_stars = len(Mass_star)
+        iso_Mass = df_iso.loc['Mass'].values
+        TF = iso_Mass < 1e10
+        #Remove inf
+        iso_Mass = iso_Mass[TF]
+        iso_Lumi = df_iso.loc['Lumi'].values[TF]
+        iso_Rad = df_iso.loc['Rad'].values[TF]
+        NPT = len(iso_Mass)
+        pick_idx = np.random.choice(range(int(NPT/4),NPT - int(NPT/4)), size=num_stars, replace=False)
+        Mass_alter = iso_Mass[pick_idx]
+        Lumi_alter = iso_Lumi[pick_idx]
+        Rad_alter = iso_Rad[pick_idx]
+        sample_error= pd.DataFrame(columns = ['+dM/Ms','-dM/Ms','+dL/Ls','-dL/Ls','+dR/Rs','-dR/Rs'], data = np.abs(np.random.normal(scale=np.array([Mass_star_p_err, Mass_star_m_err, Lumi_star_p_err, Lumi_star_m_err, Rad_star_p_err, Rad_star_m_err]).T)))
+        sample_error[['-dM/Ms','-dL/Ls','-dR/Rs']] = -sample_error[['-dM/Ms','-dL/Ls','-dR/Rs']]
+        #return mass lumi and rad for resampled stars
+        return Mass_alter + np.array([np.random.choice(sample_error[['+dM/Ms','-dM/Ms']].values[i]) for i in range(num_stars)]), Lumi_alter + np.array([np.random.choice(sample_error[['+dL/Ls','-dL/Ls']].values[i]) for i in range(num_stars)]), Rad_alter + np.array([np.random.choice(sample_error[['+dR/Rs','-dR/Rs']].values[i]) for i in range(num_stars)])
 
 
 class run(utile):
@@ -303,61 +323,25 @@ class simulate(utile):
 
 class simulate_iso(utile):
     # extract stars from isochrones, add noise from candidates, rerun the analysis
-    def main(self, iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, mc_num, age, candidates):
-        num_stars = len(Names)
-        self.check_file(iso_path)
-        iso = open(iso_path, 'r')
-        len_file = len(iso.readlines())
-        iso.seek(0)
-        len_idx = 1
-        if len_file < 10:
-            raise Exception("Empty file")
-        else:
-            while len_idx <= len_file:
-                #skip header
-                iso.readline()
-                NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
-                Mass = []
-                Lumi = []
-                Rad = []
-                #skip header
-                iso.readline()
-                len_idx += 3
-                for i in range(int(NPTS[1:])):
-                    EEP,MMs,LogG,LogTeff,LogLLs,LogRRs = iso.readline().split()
-                    Mass.append(float(MMs))
-                    Lumi.append(10**(float(LogLLs)))
-                    Rad.append(10**(float(LogRRs)))
-                Mass = np.array(Mass)
-                Lumi = np.array(Lumi)
-                Rad = np.array(Rad)
-                #Pick only the q1 to q3 values to avoid potential issue
-                NPT = len(Mass)
-                # assume a uniform distribution along the isochone 
-                # Can be updated to use some relation like PDMF
-                if age == int(AGE[:-1]):
-                    pick_idx = np.random.choice(range(int(NPT/4),NPT - int(NPT/4)), size=num_stars, replace=False)
-                    Mass_alter = Mass[pick_idx]
-                    Lumi_alter = Lumi[pick_idx]
-                    Rad_alter = Rad[pick_idx]
-                    sample_error= pd.DataFrame(columns = ['+dM/Ms','-dM/Ms','+dL/Ls','-dL/Ls','+dR/Rs','-dR/Rs'], data = np.abs(np.random.normal(scale=np.concatenate((Mass_star_p_err, Mass_star_m_err, Lumi_star_p_err, Lumi_star_m_err, Rad_star_p_err, Rad_star_m_err),axis=1))))
-                    sample_error[['-dM/Ms','-dL/Ls','-dR/Rs']] = -sample_error[['-dM/Ms','-dL/Ls','-dR/Rs']]
-                    candidates['M/Ms'] = Mass_alter + np.array([np.random.choice(sample_error[['+dM/Ms','-dM/Ms']].values[i]) for i in range(num_stars)])
-                    candidates['R/Rs'] = Rad_alter + np.array([np.random.choice(sample_error[['+dR/Rs','-dR/Rs']].values[i]) for i in range(num_stars)])
-                    candidates['L/Ls'] = Lumi_alter + np.array([np.random.choice(sample_error[['+dL/Ls','-dL/Ls']].values[i]) for i in range(num_stars)])
-                    return candidates
-                
-                len_idx += int(NPTS[1:])
-                iso.readline()
-                iso.readline()
-                len_idx += 2
-
-    def __init__(self, iso_path, star_path, wrt_path, age):
+    
+    def __init__(self, iso_path, star_path,wrt_path, resample_num):
         self.check_file(iso_path)
         self.check_file(star_path)
-        candidates = pd.read_csv(star_path)
         Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err = self.read_candidates(star_path)
-        #assume the uncertainty from the candidates are "correct" and use them directly.
-        mc_num = int(iso_path[-5:])
-        dp = self.main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, mc_num, age, candidates)
+        mc_num, df_iso, age_list = self.read_iso(iso_path)
+        age_num = len(age_list)
+        # resample all the age in an isochrone file
+        retval = np.zeros((resample_num*age_num,3))
+        idx = 0
+        for resample_age in age_list:
+            for i in range(resample_num):
+                df_iso_age = df_iso.loc[resample_age:resample_age+1].copy()
+                Mass_star, Lumi_star, Rad_star = self.resample_stars(df_iso.loc[resample_age], Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err)
+                chi2_data = self.calculate_chi2(df_iso_age, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err)
+                chi2 = np.sum(chi2_data,axis=1)[0]
+                retval[idx,0] = i
+                retval[idx,1] = chi2
+                retval[idx,2] = resample_age
+                idx += 1
+        dp = pd.DataFrame(data=retval,columns=['num_sim', 'chi2', 'age'])
         self.writeout(dp,wrt_path)
