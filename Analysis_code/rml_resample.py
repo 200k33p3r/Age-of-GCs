@@ -11,7 +11,7 @@ from typing import Union
 import numpy.typing as npt
 FARRAY_1D = npt.NDArray[np.float64]
 
-class resample:
+class utile:
     def check_file(self,path):
         if os.path.exists(path) == False:
             raise Exception("Cannot find inputfile at {}".format(path))
@@ -158,6 +158,8 @@ class resample:
         dp.to_csv(wrt_path,index=False,mode='a',header=not os.path.exists(wrt_path))
 
 
+
+class resample_run(utile):
     def __init__(self, iso_path, star_path, wrt_path, resample_num, resample_age):
         self.check_file(iso_path)
         self.check_file(star_path)
@@ -169,4 +171,17 @@ class resample:
         dp = pd.DataFrame(data=chi2_data,columns=Names)
         dp['chi2_sum'] = np.sum(chi2_data,axis=1)
         self.writeout(dp, wrt_path)
-        
+
+class resample_star(utile):
+    def __init__(self, iso_path, star_path, wrt_path, resample_age):
+        self.check_file(iso_path)
+        self.check_file(star_path)
+        Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, EEPs = self.read_candidates(star_path)
+        mc_num, df_iso, _ = self.read_iso(iso_path)
+        df_age = df_iso.loc[resample_age]
+        Mass_star, Lumi_star, Rad_star = self.resample_stars(df_age, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,EEPs, 1)
+        dp = pd.read_csv(star_path)
+        dp['M/Ms'] = Mass_star.flatten()
+        dp['R/Rs'] = Rad_star.flatten()
+        dp['L/Ls'] = Lumi_star.flatten()
+        self.writeout(dp,wrt_path)
