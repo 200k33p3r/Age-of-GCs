@@ -135,7 +135,12 @@ class utile:
         iso_Mass = df_iso.loc['Mass'].values
         iso_Lumi = df_iso.loc['Lumi'].values
         iso_Rad = df_iso.loc['Rad'].values
-        pick_idx = np.array([np.random.choice(range(EEPs[i] - 5, EEPs[i] + 5), size=resample_num, replace=True) for i in range(len(EEPs))])
+        iso_TF = iso_Mass < np.inf
+        iso_Mass = iso_Mass[iso_TF]
+        iso_Lumi = iso_Lumi[iso_TF]
+        iso_Rad = iso_Rad[iso_TF]
+        # pick_idx = np.array([np.random.choice(range(EEPs[i] - 1, EEPs[i] + 1), size=resample_num, replace=True) for i in range(len(EEPs))])
+        pick_idx = np.random.choice(range(int(len(iso_Mass)/4),len(iso_Mass) - int(len(iso_Mass)/4)), size=(num_stars, resample_num), replace=True)
         Mass_alter = iso_Mass[pick_idx]
         Lumi_alter = iso_Lumi[pick_idx]
         Rad_alter = iso_Rad[pick_idx]
