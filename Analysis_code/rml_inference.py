@@ -65,34 +65,54 @@ class utile:
     #     minchi2 = np.sum(indi_fit)
     #     return minchi2, indi_fit.tolist()
     
-    def calculate_chi2(self, df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err):
+    def calculate_chi2(self, df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
         N_stars = len(Mass_star)
         #define the matrix value
         age_num = len(df_iso.index.get_level_values(0).unique())
         chi2_data = np.zeros((age_num, N_stars))
-        for i in range(N_stars):
-            Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
-            Lumi = df_iso.loc[(slice(None),'Lumi'),:].copy().values
-            Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
-            #calculate difference
-            Mass -= Mass_star[i]
-            Lumi -= Lumi_star[i]
-            Rad -= Rad_star[i]
-            #find whether the difference is greater than 0 or not
-            Mass_TF = Mass > 0
-            Lumi_TF = Lumi > 0
-            Rad_TF = Rad > 0
-            #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
-            Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
-            Lumi_chi2 = np.divide(Lumi,np.where(Lumi_TF,Lumi_star_p_err[i],Lumi_star_m_err[i]))
-            Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
-            #square the result
-            Mass_chi2 = np.square(Mass_chi2)
-            Lumi_chi2 = np.square(Lumi_chi2)
-            Rad_chi2 = np.square(Rad_chi2)
-            chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
-            indi_fit = np.min(chi2,axis=1)
-            chi2_data[:,i] = indi_fit
+        if Consider_Lumi == True:
+            for i in range(N_stars):
+                Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
+                Lumi = df_iso.loc[(slice(None),'Lumi'),:].copy().values
+                Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
+                #calculate difference
+                Mass -= Mass_star[i]
+                Lumi -= Lumi_star[i]
+                Rad -= Rad_star[i]
+                #find whether the difference is greater than 0 or not
+                Mass_TF = Mass > 0
+                Lumi_TF = Lumi > 0
+                Rad_TF = Rad > 0
+                #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+                Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
+                Lumi_chi2 = np.divide(Lumi,np.where(Lumi_TF,Lumi_star_p_err[i],Lumi_star_m_err[i]))
+                Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
+                #square the result
+                Mass_chi2 = np.square(Mass_chi2)
+                Lumi_chi2 = np.square(Lumi_chi2)
+                Rad_chi2 = np.square(Rad_chi2)
+                chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
+                indi_fit = np.min(chi2,axis=1)
+                chi2_data[:,i] = indi_fit
+        else:
+            for i in range(N_stars):
+                Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
+                Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
+                #calculate difference
+                Mass -= Mass_star[i]
+                Rad -= Rad_star[i]
+                #find whether the difference is greater than 0 or not
+                Mass_TF = Mass > 0
+                Rad_TF = Rad > 0
+                #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+                Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
+                Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
+                #square the result
+                Mass_chi2 = np.square(Mass_chi2)
+                Rad_chi2 = np.square(Rad_chi2)
+                chi2 = Mass_chi2 + Rad_chi2
+                indi_fit = np.min(chi2,axis=1)
+                chi2_data[:,i] = indi_fit
         return chi2_data
 
     def writeout(self,dp,wrt_path):
@@ -237,20 +257,20 @@ class utile:
 
 
 class run(utile):
-    def main(self,iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err):
+    def main(self,iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi):
         mc_num, df_iso, age_list = self.read_iso(iso_path)
-        chi2_data = self.calculate_chi2(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err)
+        chi2_data = self.calculate_chi2(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,Consider_Lumi=Consider_Lumi)
         dp = pd.DataFrame(data=chi2_data,columns=Names)
         dp['mc_num'] = np.full(len(dp),mc_num)
         dp['chi2'] = np.sum(chi2_data,axis=1)
         dp['Age'] = age_list
         return dp
     
-    def __init__(self, iso_path, star_path,wrt_path):
+    def __init__(self, iso_path, star_path,wrt_path,Consider_Lumi=True):
         self.check_file(iso_path)
         self.check_file(star_path)
         Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err = self.read_candidates(star_path)
-        dp = self.main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err)
+        dp = self.main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,Consider_Lumi)
         self.writeout(dp,wrt_path)
 
 # class simulate(utile):
