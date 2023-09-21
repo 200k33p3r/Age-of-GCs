@@ -172,7 +172,7 @@ class utile:
     #                 iso.readline()
     #                 len_idx += 2
     
-    def read_iso(self, iso_path, max_eep=1000 ,age_list: Union[bool, FARRAY_1D] = np.linspace(8000,16000,81).astype(int),param_list=np.array(['Mass', 'Lumi', 'Rad'])):
+    def read_iso(self, iso_path, max_eep=1500 ,age_list: Union[bool, FARRAY_1D] = np.linspace(8000,16000,81).astype(int),param_list=np.array(['Mass', 'Lumi', 'Rad']), iso_D = False):
         self.check_file(iso_path)
         mc_num = int(iso_path[-5:])
         iso = open(iso_path, 'r')
@@ -180,59 +180,75 @@ class utile:
         iso.seek(0)
         len_idx = 1
         if len_file < 10:
+            iso.close()
             raise Exception("Empty file")
         else:
-            if age_list == 'Unknown':
-                age_list = []
+            if iso_D == False:
+                if age_list == 'Unknown':
+                    age_list = []
+                    while len_idx <= len_file:
+                        #look for how many ages it contains
+                        iso.readline()
+                        RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
+                        npts = int(RAW_NPTS[1:])
+                        age_list.append(int(AGE[:-1]))
+                        iso.readline()
+                        len_idx += 3
+                        for i in range(npts):
+                            iso.readline()
+                        len_idx += npts
+                        iso.readline()
+                        iso.readline()
+                        len_idx += 2
+                    #return to default
+                    iso.seek(0)
+                    len_idx = 1
+                    age_list = np.array(age_list)
+                #generate Mutiindex dataframe
+                num_age = len(age_list)
+                num_param = len(param_list)
+                arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
+                data = np.full((num_age*num_param, max_eep),np.inf)
+                data_idx = 0
                 while len_idx <= len_file:
-                    #look for how many ages it contains
+                    #skip header
                     iso.readline()
                     RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
                     npts = int(RAW_NPTS[1:])
-                    age_list.append(int(AGE[:-1]))
+                    # Mass = np.zeros(npts)
+                    # Lumi = np.zeros(npts)
+                    # Rad = np.zeros(npts)
+                    #skip header
                     iso.readline()
                     len_idx += 3
                     for i in range(npts):
-                        iso.readline()
+                        EEP,MMs,LogG,LogTeff,LogLLs,LogRRs = iso.readline().split()
+                        # Mass[i] = float(MMs)
+                        # Lumi[i] = float(LogLLs)
+                        # Rad[i] = float(LogRRs)
+                        data[data_idx,i] = float(MMs)
+                        data[data_idx+1,i] = 10**float(LogLLs)
+                        data[data_idx+2,i] = 10**float(LogRRs)
+                    data_idx += 3
                     len_idx += npts
                     iso.readline()
                     iso.readline()
                     len_idx += 2
-                #return to default
-                iso.seek(0)
-                len_idx = 1
-                age_list = np.array(age_list)
-            #generate Mutiindex dataframe
-            num_age = len(age_list)
-            num_param = len(param_list)
-            arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
-            data = np.full((num_age*num_param, max_eep),np.inf)
-            data_idx = 0
-            while len_idx <= len_file:
-                #skip header
-                iso.readline()
-                RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
-                npts = int(RAW_NPTS[1:])
-                # Mass = np.zeros(npts)
-                # Lumi = np.zeros(npts)
-                # Rad = np.zeros(npts)
-                #skip header
-                iso.readline()
-                len_idx += 3
-                for i in range(npts):
-                    EEP,MMs,LogG,LogTeff,LogLLs,LogRRs = iso.readline().split()
-                    # Mass[i] = float(MMs)
-                    # Lumi[i] = float(LogLLs)
-                    # Rad[i] = float(LogRRs)
-                    data[data_idx,i] = float(MMs)
-                    data[data_idx+1,i] = 10**float(LogLLs)
-                    data[data_idx+2,i] = 10**float(LogRRs)
-                data_idx += 3
-                len_idx += npts
-                iso.readline()
-                iso.readline()
-                len_idx += 2
-            iso.close()
+                iso.close()
+            else:
+                iso.close()
+                #generate Mutiindex dataframe
+                num_age = len(age_list)
+                num_param = len(param_list)
+                arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
+                data = np.full((num_age*num_param, max_eep),np.inf)
+                #read in isochrone file
+                iso = pd.read_csv(iso_path)
+                iso['Age'] = (iso['Age']/10**6).astype(int)
+                for i, age in enumerate(age_list):
+                    data[3*i,df[df['Age'] == age]['EEP']] = df[df['Age'] == age]['MMs']
+                    data[3*i+1,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogLLs'])
+                    data[3*i+2,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogRRs'])
             df = pd.DataFrame(data,index=arrays)
         return mc_num, df, age_list
     
