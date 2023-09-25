@@ -211,26 +211,7 @@ def read_iso(iso_path, max_eep=1500 ,age_list: Union[bool, FARRAY_1D] = np.linsp
         df = pd.DataFrame(data,index=arrays)
     return mc_num, df, age_list
 
-def resample_stars( df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err):
-    #given the information about an isochrone, and the observed binaries, we redraw stars from the theoretical isochrone with know uncertainty.
-    num_stars = len(Mass_star)
-    iso_Mass = df_iso.loc['Mass'].values
-    TF = iso_Mass < 1e10
-    #Remove inf
-    iso_Mass = iso_Mass[TF]
-    iso_Lumi = df_iso.loc['Lumi'].values[TF]
-    iso_Rad = df_iso.loc['Rad'].values[TF]
-    NPT = len(iso_Mass)
-    pick_idx = np.random.choice(range(int(NPT/4),NPT - int(NPT/4)), size=num_stars, replace=False)
-    Mass_alter = iso_Mass[pick_idx]
-    Lumi_alter = iso_Lumi[pick_idx]
-    Rad_alter = iso_Rad[pick_idx]
-    sample_error= pd.DataFrame(columns = ['+dM/Ms','-dM/Ms','+dL/Ls','-dL/Ls','+dR/Rs','-dR/Rs'], data = np.abs(np.random.normal(scale=np.array([Mass_star_p_err, Mass_star_m_err, Lumi_star_p_err, Lumi_star_m_err, Rad_star_p_err, Rad_star_m_err]).T)))
-    sample_error[['-dM/Ms','-dL/Ls','-dR/Rs']] = -sample_error[['-dM/Ms','-dL/Ls','-dR/Rs']]
-    #return mass lumi and rad for resampled stars
-    return Mass_alter + np.array([np.random.choice(sample_error[['+dM/Ms','-dM/Ms']].values[i]) for i in range(num_stars)]), Lumi_alter + np.array([np.random.choice(sample_error[['+dL/Ls','-dL/Ls']].values[i]) for i in range(num_stars)]), Rad_alter + np.array([np.random.choice(sample_error[['+dR/Rs','-dR/Rs']].values[i]) for i in range(num_stars)])
-
-def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,EEPs, resample_num,Uniform_Resample=True):
+def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, resample_num,EEPs=None,Uniform_Resample=True):
     #given the information about an isochrone, and the observed binaries, we redraw stars from the theoretical isochrone with know uncertainty.
     #If Uniform_Resample == True, we draw stars uniformly from the center 50% of the isochrones
     #Otherwise, we choose resample stars from +/- 3 eeps from the given eep point
@@ -263,3 +244,8 @@ def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_sta
     L_err = np.multiply(L_p_re,L_TF) + np.multiply(L_m_re, (L_TF - 1)*-1)
     #return mass lumi and rad for resampled stars
     return (Mass_alter + M_err).T, (Lumi_alter + L_err).T, (Rad_alter + R_err).T
+
+def read_eeps(eep_path):
+    check_file(eep_path)
+    df = pd.read_csv(eep_path)
+    return df
