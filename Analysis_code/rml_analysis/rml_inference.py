@@ -4,7 +4,7 @@
 
 import numpy as np
 import pandas as pd
-from rml_support import read_iso, calculate_chi2, check_file, writeout
+from rml_support import read_iso, calculate_chi2, check_file, writeout, read_candidates
 
 def main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi,iso_D):
     mc_num, df_iso, age_list = read_iso(iso_path,iso_D=iso_D)

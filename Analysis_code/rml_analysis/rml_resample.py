@@ -3,7 +3,7 @@
 #and luminosity values to fit resampled eclipsing binaries.
 import numpy as np
 import pandas as pd
-from rml_support import read_iso, calculate_chi2, check_file, writeout, resample_stars
+from rml_support import read_iso, calculate_chi2, check_file, writeout, resample_stars, read_candidates
 
 class resample_run:
     def __init__(iso_path, star_path, wrt_path, resample_num, resample_age, Consider_Lumi=True):
