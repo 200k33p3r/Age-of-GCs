@@ -25,7 +25,7 @@ def read_candidates(star_path):
     Rad_star = dp['R/Rs'].values
     Rad_star_p_err = dp['+dR/Rs'].values
     Rad_star_m_err = dp['-dR/Rs'].values
-    return Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err
+    return Names, Mass_star.reshape((N_stars, 1, 1)), Mass_star_p_err, Mass_star_m_err, Lumi_star.reshape((N_stars, 1, 1)), Lumi_star_p_err, Lumi_star_m_err, Rad_star.reshape((N_stars, 1, 1)), Rad_star_p_err, Rad_star_m_err
 
 def determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
     N_stars = len(Mass_star)
@@ -76,57 +76,114 @@ def determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star
             chi2 = Mass_chi2 + Rad_chi2
             indi_fit = np.argmin(chi2,axis=1)
             chi2_data[:,i] = indi_fit
-    return age_list, chi2_data
+    return age_list, chi2_data.astype(int)
 
 def calculate_chi2(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
-    N_stars = len(Mass_star)
-    #define the matrix value
-    age_num = len(df_iso.index.get_level_values(0).unique())
-    chi2_data = np.zeros((age_num, N_stars))
+    #Case 1: 1 set of isochrones fitted to 1 set of stars
+    #Case 2: Mutiple set of isochrones fitted to 1 set of stars
+    #Case 3: 1 set of isochrones fitted to mutiple sets of stars
+    #Case 4: Mutiple set of isochrones fitted to mutiple sets of stars
+    
+    #Get iso values
+    Mass_iso = df_iso.loc[(slice(None),'Mass'),:].copy().values
     if Consider_Lumi == True:
-        for i in range(N_stars):
-            Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
-            Lumi = df_iso.loc[(slice(None),'Lumi'),:].copy().values
-            Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
-            #calculate difference
-            Mass -= Mass_star[i]
-            Lumi -= Lumi_star[i]
-            Rad -= Rad_star[i]
-            #find whether the difference is greater than 0 or not
-            Mass_TF = Mass > 0
-            Lumi_TF = Lumi > 0
-            Rad_TF = Rad > 0
-            #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
-            Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
-            Lumi_chi2 = np.divide(Lumi,np.where(Lumi_TF,Lumi_star_p_err[i],Lumi_star_m_err[i]))
-            Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
-            #square the result
-            Mass_chi2 = np.square(Mass_chi2)
-            Lumi_chi2 = np.square(Lumi_chi2)
-            Rad_chi2 = np.square(Rad_chi2)
-            chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
-            indi_fit = np.min(chi2,axis=1)
-            chi2_data[:,i] = indi_fit
+        Lumi_iso = df_iso.loc[(slice(None),'Lumi'),:].copy().values
+    Rad_iso = df_iso.loc[(slice(None),'Rad'),:].copy().values
+    #Determine which case are we evaluating
+    N_stars, num_sample, _ = np.shape(Mass_star)
+    N_iso, _ = np.shape(Mass_iso)
+    #define the matrix value
+    chi2_data = np.zeros((max(N_iso, num_sample), N_stars))
+    #Case 4
+    if num_sample > 1 and N_iso > 1:
+        raise Exception("Cannot fit multiple isochrones to mutiple sets of stars simultaniously")
     else:
-        for i in range(N_stars):
-            Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
-            Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
-            #calculate difference
-            Mass -= Mass_star[i]
-            Rad -= Rad_star[i]
-            #find whether the difference is greater than 0 or not
-            Mass_TF = Mass > 0
-            Rad_TF = Rad > 0
-            #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
-            Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
-            Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
-            #square the result
-            Mass_chi2 = np.square(Mass_chi2)
-            Rad_chi2 = np.square(Rad_chi2)
+        #calculate difference
+        Mass = Mass_iso - Mass_star
+        Rad = Rad_iso - Rad_star
+        #find whether the difference is greater than 0 or not
+        Mass_TF = Mass > 0
+        Rad_TF = Rad > 0
+        #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+        Mass_chi2 = np.array([np.divide(Mass[i],np.where(Mass_TF[i],Mass_star_p_err[i],Mass_star_m_err[i])) for i in range(N_stars)])
+        Rad_chi2 = np.array([np.divide(Rad[i],np.where(Rad_TF[i],Rad_star_p_err[i],Rad_star_m_err[i])) for i in range(N_stars)])
+        #square the result
+        Mass_chi2 = np.square(Mass_chi2)
+        Rad_chi2 = np.square(Rad_chi2)
+        if Consider_Lumi == True:
+            #Calculate Lumi only if Consider_Lumi = True
+            Lumi = Lumi_iso - Lumi_star
+            Lumi_TF = Lumi > 0
+            Lumi_chi2 = np.array([np.divide(Lumi[i],np.where(Lumi_TF[i],Lumi_star_p_err[i],Lumi_star_m_err[i])) for i in range(N_stars)])
+            Lumi_chi2 = np.square(Lumi_chi2)
+            chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
+        else:
             chi2 = Mass_chi2 + Rad_chi2
-            indi_fit = np.min(chi2,axis=1)
-            chi2_data[:,i] = indi_fit
-    return chi2_data
+        chi2_data = np.min(chi2,axis=2)
+    #Case 3: np.shape(chi2_data) = (num_star, num_resample)
+    #Case 2: np.shape(chi2_data) = (num_star, num_iso)
+    #Case 1: np.shape(chi2_data) = (num_star, 1)
+    return chi2_data.T
+
+    
+
+
+
+    # #define the matrix value
+    # age_num = len(df_iso.index.get_level_values(0).unique())
+    # resample_num = 
+    # Mass_iso = df_iso.loc[(slice(None),'Mass'),:].copy().values
+    # Lumi_iso = df_iso.loc[(slice(None),'Lumi'),:].copy().values
+    # Rad_iso = df_iso.loc[(slice(None),'Rad'),:].copy().values
+    # chi2_data = np.zeros((age_num, N_stars))
+    # if Consider_Lumi == True:
+    #     for i in range(N_stars):
+    #         Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
+    #         Lumi = df_iso.loc[(slice(None),'Lumi'),:].copy().values
+    #         Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
+    #         if len(Mass) == 1:
+    #             Mass = Mass[0]
+    #             Lumi = Lumi[0]
+    #             Rad = Rad[0]
+    #         #calculate difference
+    #         Mass = Mass - Mass_star[i]
+    #         Lumi = Lumi - Lumi_star[i]
+    #         Rad = Rad - Rad_star[i]
+    #         #find whether the difference is greater than 0 or not
+    #         Mass_TF = Mass > 0
+    #         Lumi_TF = Lumi > 0
+    #         Rad_TF = Rad > 0
+    #         #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+    #         Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
+    #         Lumi_chi2 = np.divide(Lumi,np.where(Lumi_TF,Lumi_star_p_err[i],Lumi_star_m_err[i]))
+    #         Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
+    #         #square the result
+    #         Mass_chi2 = np.square(Mass_chi2)
+    #         Lumi_chi2 = np.square(Lumi_chi2)
+    #         Rad_chi2 = np.square(Rad_chi2)
+    #         chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
+    #         indi_fit = np.min(chi2,axis=1)
+    #         chi2_data[:,i] = indi_fit
+    # else:
+    #     for i in range(N_stars):
+    #         Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
+    #         Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
+    #         #calculate difference
+    #         Mass -= Mass_star[i]
+    #         Rad -= Rad_star[i]
+    #         #find whether the difference is greater than 0 or not
+    #         Mass_TF = Mass > 0
+    #         Rad_TF = Rad > 0
+    #         #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+    #         Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
+    #         Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
+    #         #square the result
+    #         Mass_chi2 = np.square(Mass_chi2)
+    #         Rad_chi2 = np.square(Rad_chi2)
+    #         chi2 = Mass_chi2 + Rad_chi2
+    #         indi_fit = np.min(chi2,axis=1)
+    #         chi2_data[:,i] = indi_fit
+    # return chi2_data
 
 def writeout(dp,wrt_path):
     dp.to_csv(wrt_path,index=False,mode='a',header=not os.path.exists(wrt_path))
@@ -226,7 +283,7 @@ def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_sta
         iso_Rad = iso_Rad[iso_TF]
         pick_idx = np.random.choice(range(int(len(iso_Mass)/4),len(iso_Mass) - int(len(iso_Mass)/4)), size=(num_stars, resample_num), replace=True)
     else:
-        pick_idx = np.array([np.random.choice(range(EEPs[i-3],EEPs[i+3]), size=(num_stars, resample_num), replace=True) for i in range(num_stars)])
+        pick_idx = np.array([np.random.choice(range(EEPs[i]-3,EEPs[i]+3), size=resample_num, replace=True) for i in range(num_stars)])
     Mass_alter = iso_Mass[pick_idx]
     Lumi_alter = iso_Lumi[pick_idx]
     Rad_alter = iso_Rad[pick_idx]
@@ -243,9 +300,9 @@ def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_sta
     L_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
     L_err = np.multiply(L_p_re,L_TF) + np.multiply(L_m_re, (L_TF - 1)*-1)
     #return mass lumi and rad for resampled stars
-    return (Mass_alter + M_err).T, (Lumi_alter + L_err).T, (Rad_alter + R_err).T
+    return (Mass_alter + M_err).reshape((num_stars, resample_num, 1)), (Lumi_alter + L_err).reshape((num_stars, resample_num, 1)), (Rad_alter + R_err).reshape((num_stars, resample_num, 1))
 
 def read_eeps(eep_path):
     check_file(eep_path)
-    df = pd.read_csv(eep_path)
+    df = pd.read_csv(eep_path,dtype=np.int32)
     return df
