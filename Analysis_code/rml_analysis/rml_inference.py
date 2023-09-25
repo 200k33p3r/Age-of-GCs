@@ -4,7 +4,7 @@
 
 import numpy as np
 import pandas as pd
-from rml_support import read_iso, calculate_chi2, check_file, writeout, read_candidates
+from rml_support import read_iso, calculate_chi2, check_file, writeout, read_candidates, determine_EEP
 
 def main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi,iso_D):
     mc_num, df_iso, age_list = read_iso(iso_path,iso_D=iso_D)
@@ -21,3 +21,15 @@ def run_analysis(iso_path, star_path,wrt_path,Consider_Lumi=True,iso_D=True):
     Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err = read_candidates(star_path)
     dp = main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,Consider_Lumi,iso_D)
     writeout(dp,wrt_path)
+
+def find_eeps(iso_paths, star_path, wrt_path, Consider_Lumi=True,iso_D=True):
+    check_file(star_path)
+    Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err = read_candidates(star_path)
+    for iso_path in iso_paths:
+        check_file(iso_path)
+        mc_num, df_iso, age_list = read_iso(iso_path,iso_D=iso_D)
+        age_list, chi2_data = determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,Consider_Lumi=Consider_Lumi)
+        dp = pd.DataFrame(data=chi2_data,columns=Names)
+        dp['Age'] = age_list
+        dp['mc_num'] = [mc_num]*len(dp)
+        writeout(dp,wrt_path)

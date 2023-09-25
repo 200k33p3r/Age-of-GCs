@@ -27,7 +27,58 @@ def read_candidates(star_path):
     Rad_star_m_err = dp['-dR/Rs'].values
     return Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err
 
-def calculate_chi2( df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
+def determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
+    N_stars = len(Mass_star)
+    #define the matrix value
+    age_list = df_iso.index.get_level_values(0).unique()
+    age_num = len(age_list)
+    chi2_data = np.zeros((age_num, N_stars))
+    if Consider_Lumi == True:
+        for i in range(N_stars):
+            Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
+            Lumi = df_iso.loc[(slice(None),'Lumi'),:].copy().values
+            Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
+            #calculate difference
+            Mass -= Mass_star[i]
+            Lumi -= Lumi_star[i]
+            Rad -= Rad_star[i]
+            #find whether the difference is greater than 0 or not
+            Mass_TF = Mass > 0
+            Lumi_TF = Lumi > 0
+            Rad_TF = Rad > 0
+            #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+            Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
+            Lumi_chi2 = np.divide(Lumi,np.where(Lumi_TF,Lumi_star_p_err[i],Lumi_star_m_err[i]))
+            Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
+            #square the result
+            Mass_chi2 = np.square(Mass_chi2)
+            Lumi_chi2 = np.square(Lumi_chi2)
+            Rad_chi2 = np.square(Rad_chi2)
+            chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
+            indi_fit = np.argmin(chi2,axis=1)
+            chi2_data[:,i] = indi_fit
+    else:
+        for i in range(N_stars):
+            Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
+            Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
+            #calculate difference
+            Mass -= Mass_star[i]
+            Rad -= Rad_star[i]
+            #find whether the difference is greater than 0 or not
+            Mass_TF = Mass > 0
+            Rad_TF = Rad > 0
+            #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+            Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
+            Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
+            #square the result
+            Mass_chi2 = np.square(Mass_chi2)
+            Rad_chi2 = np.square(Rad_chi2)
+            chi2 = Mass_chi2 + Rad_chi2
+            indi_fit = np.argmin(chi2,axis=1)
+            chi2_data[:,i] = indi_fit
+    return age_list, chi2_data
+
+def calculate_chi2(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
     N_stars = len(Mass_star)
     #define the matrix value
     age_num = len(df_iso.index.get_level_values(0).unique())
