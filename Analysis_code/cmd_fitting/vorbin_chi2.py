@@ -299,7 +299,7 @@ class chi2(utiles):
 		#run the grid search
 		for dm in dm_bound:
 			for red in red_bound:
-				chi2 = self.dm_red_search([dm_fit,red_fit])
+				chi2 = self.dm_red_search([dm,red])
 				if chi2 < chi2_fit:
 					chi2_fit = chi2
 					dm_fit = dm
@@ -826,3 +826,89 @@ class resample_fidanka(utiles):
 			paramlist.append((Binary_Fraction, sample_pt, obs_vi_max,obs_vi_min,obs_v_max,obs_v_min,vorbin_path,chi2_path, start + (i-1)*10, end, write_vorbin,cmd_path,write_cmd))
 			with Pool(pool, initializer=np.random.seed) as MP_pool:
 				MP_pool.starmap(self.calculate_chi2, paramlist)
+
+class chi2_iso(utiles):
+
+	def read_input(self,path):
+		names = ['vi','v']
+		obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names)
+		for i in range(len(names)):
+			for j in range(len(obs_data.columns)):
+				if names[i] == obs_data.columns[j]:
+					setattr(self,names[i] + '_idx', j)
+		self.obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names).to_numpy()
+
+	def __init__(self, GC_name, mc_num, age, obs_i, resample_i, UniSN=False, write_vorbin=False, Tb_size=30):
+		#define distance modulus and reddening ranges
+		if GC_name == 'M55':
+			# dm_max = 14.40
+			# dm_min = 13.40
+			# red_max = 0.20
+			# red_min = 0.00
+			dm_max = 14.1
+			dm_min = 13.8
+			red_max = 0.15
+			red_min = 0.08
+		if GC_name == 'M92':
+			self.feh = 230
+		elif GC_name == 'M55':
+			self.feh = 190
+		self.Tb_size = Tb_size
+		#define all the path for read and write
+		obs_data_path = "/home/mying/Desktop/{}_resample/outcmd/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
+		vorbin_path = "/home/mying/Desktop/{}_resample/vorbin/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
+		chi2_path = "/home/mying/Desktop/{}_resample/outchi2/mc{}.a{}".format(GC_name, mc_num,age)
+		cmd_path = "/home/mying/Desktop/{}_resample/outcmd/mc{}.a{}_{}".format(GC_name, mc_num,age, str(resample_i))
+		iso_path = "/home/mying/Desktop/{}_resample/outiso/".format(GC_name)
+		#check those directories exist
+		self.check_file(obs_data_path)
+		#self.check_directories(vorbin_path)
+		#self.check_directories(chi2_path)
+		#self.check_directories(cmd_path)
+		self.check_directories(iso_path)
+		self.read_input(obs_data_path)
+		#read cmd files
+		cmd = pd.read_csv(cmd_path,sep='\s+',names=['vi','v'],skiprows=3)
+		#go through the search process
+		self.obs_vi_max = max(cmd['vi'].values)
+		self.obs_vi_min = min(cmd['vi'].values)
+		self.obs_v_max = max(cmd['v'].values)
+		self.obs_v_min = min(cmd['v'].values)
+		self.width_coeff = (self.obs_v_max - self.obs_v_min)/(self.obs_vi_max - self.obs_vi_min)
+		#check whether vorbin already existed or not
+		if os.path.isfile(vorbin_path) == True:
+			vorbin = pd.read_csv(vorbin_path, skiprows=1,names=['x_gen', 'y_gen','bin_count_std'])
+			self.XBar = np.float32(vorbin['x_gen'].values)
+			self.YBar = np.float32(vorbin['y_gen'].values)
+			self.bin_count_std = vorbin['bin_count_std'].values
+			self.total_pt = np.sum(self.bin_count_std)
+		else:
+			if UniSN == False:
+				#generate vorbin use the first 100000 data points
+				V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(cmd,read_track=self.find_two_eeps(iso_path))
+				x_gen, y_gen = self.generate_vorbin([V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB])
+			else:
+				#generate vorbin use the first 100000 data points
+				x_gen, y_gen = self.generate_vorbin([cmd['v'].values,cmd['vi'].values*self.width_coeff], UniSN=True)
+			#reduce memory usage for matrix operations
+			self.XBar = np.float32(x_gen)
+			self.YBar = np.float32(y_gen)
+			self.v_32 = np.float32(cmd['v'].values)
+			self.vi_32 = np.float32(cmd['vi'].values*self.width_coeff)
+			#find standard bin count by search through all the theoretical data points
+			self.total_pt = len(cmd)
+			self.bin_count_std = self.search_vorbin(self.XBar, self.YBar, self.total_pt, self.vi_32, self.v_32)
+			#write vorbin infor if desired
+			if write_vorbin == True:
+				bin_loc = np.vstack((self.XBar,self.YBar,self.bin_count_std)).T
+				dp = pd.DataFrame(data=bin_loc, columns = ['xNode', 'yNode','bin_count_std'])
+				dp.to_csv(vorbin_path, index=False)
+		#calculate chi2
+		dm,red = 0.0,0.0
+		chi2_fit = self.dm_red_search([dm,red])
+
+		#write out the result
+		df_retval = pd.DataFrame({'chi2': [chi2_fit], 'obs_i': [obs_i], 'fit_i':[resample_i]})
+		df_retval.to_csv(chi2_path,index=False,mode='a',header=not os.path.exists(chi2_path))
+
+		print("done obs:{}, reasample:{}".format(obs_i, resample_i))
