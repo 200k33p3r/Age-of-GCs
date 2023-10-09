@@ -6,6 +6,8 @@ import os
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
+from skopt import gp_minimize
+from scipy.interpolate import LinearNDInterpolator
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
 #from skopt.space.space import Real
@@ -16,6 +18,64 @@ from scipy.optimize import differential_evolution as DE
 #os.environ['MKL_NUM_THREADS'] = '1'
 
 class utiles:
+	#Divide-and-Conquer method to find the 2d ecdf
+	def _rank2(self, points, mask=None):
+		N = points.shape[0]
+		N2 = N//2
+		if N == 1:
+			return 0
+		else:
+			idx = np.argpartition(points[:,0], N2)
+			idxA_ = idx[:N2]
+			idxA = np.zeros(N, dtype=bool)
+			idxA[idxA_] = True
+			if mask is not None:
+				NAm = np.sum(idxA & mask)
+				points_reduced = np.vstack((points[idxA & mask], points[~idxA & ~mask]))
+			else:
+				NAm = np.sum(idxA)
+				points_reduced = np.vstack((points[idxA], points[~idxA]))
+			count_points = np.zeros(points_reduced.shape[0], dtype=bool)
+			count_points[:NAm] = True
+			idxY = np.argsort(points_reduced[:,1])
+			idxYr = np.zeros_like(idxY)
+			idxYr[idxY] = np.arange(idxY.shape[0]) # inverse of idxY
+			count_points = count_points[idxY]
+			numA = np.cumsum(count_points)[idxYr]
+			rank = np.zeros(N, dtype=int)
+			if mask is not None:
+				rank[idxA] = self._rank2(points[idxA], mask[idxA])
+				rank[~idxA] = self._rank2(points[~idxA], mask[~idxA])
+				rank[~idxA & ~mask] += numA[NAm:]
+			else:
+				rank[idxA] = self._rank2(points[idxA])
+				rank[~idxA] = self._rank2(points[~idxA])
+				rank[~idxA] += numA[NAm:]
+			return rank
+
+	def rankn(self, points, mask=None):
+		N = points.shape[0]
+		N2 = N//2
+		if mask is None:
+			mask = np.ones(N, dtype=bool)
+			first_call = True
+		else:
+			first_call = False
+		if N == 1:
+			return 0
+		if points.shape[1] == 2:
+			if first_call:
+				return self._rank2(points)
+			else:
+				return self._rank2(points, mask)
+		idx = np.argpartition(points[:,0], N2)
+		idxA_ = idx[:N2]
+		idxA = np.zeros(N, dtype=bool)
+		idxA[idxA_] = True
+		rank = np.zeros(N, dtype=int)
+		rank[idxA] = self.rankn(points[idxA], mask[idxA])
+		rank[~idxA] = self.rankn(points[~idxA], mask[~idxA]) + self.rankn(points[:,1:], idxA*mask)[~idxA]
+		return rank
 	def check_file(self,path):
 		if os.path.exists(path) == False:
 			raise Exception("Cannot find inputfile at {}".format(path))
@@ -356,6 +416,83 @@ class chi2(utiles):
 		self.read_input(obs_data_path)
 		self.main(write_vorbin,cmd_path, dm_max, dm_min, red_max, red_min,iso_path,chi2_path,UniSN=UniSN)
 		print("done mc{}".format(self.mc_num))
+
+class KS_2d(utiles):
+	def read_input(self,path):
+		#read M92 observed data
+		obs_data = pd.read_csv(path)
+		# names = ['v','v_err','i','i_err','vi','vi_err','x','y']
+		# for i in range(len(names)):
+		# 	for j in range(len(obs_data.columns)):
+		# 		if names[i] == obs_data.columns[j]:
+		# 			setattr(self,names[i] + '_idx', j)
+		self.obs_data = pd.read_csv(path)[['vi','v']].to_numpy()
+		self.obs_data[:,1] = - self.obs_data[:,1]
+
+	def evaluate(self, theta):
+		dm,red = theta
+		#cut the sCMD data first
+		Obs_DM_Red_CR = self.obs_data - [red, -dm]
+		sCMD_in_range = self.sCMD[(self.sCMD['v'] < self.obs_v_max - dm) & (self.sCMD['v'] > self.obs_v_min - dm)]
+		fit_values = sCMD_in_range.values[:self.num_stars]
+		fit_values[:,1] = -fit_values[:,1]
+		sCMD_emp_ff = LinearNDInterpolator(fit_values, self.rankn(fit_values)/len(fit_values), fill_value=0)
+		sCMD_Pred_cdf = sCMD_emp_ff(Obs_DM_Red_CR)
+		mask = (self.Obs_cdf != 0.0) & (sCMD_Pred_cdf != 0.0)
+		return np.max(np.abs(sCMD_Pred_cdf[mask] - self.Obs_cdf[mask]))
+
+	def main(self, cmd_path, dm_max, dm_min, red_max, red_min,chi2_path):
+		age = self.iso_age
+		#read cmd files
+		self.sCMD = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
+		#go through the search process
+		self.obs_v_max = max(-self.obs_data[:,1])
+		self.obs_v_min = min(-self.obs_data[:,1])
+		self.Obs_cdf = self.rankn(self.obs_data)/len(self.obs_data)
+		res = gp_minimize(self.evaluate,                  # the function to minimize
+                  [(dm_min, dm_max), (red_min, red_max)],      # the bounds on each dimension of x
+                  acq_func="EI",      # the acquisition function
+                  n_calls=50,         # the number of evaluations of f
+                  n_random_starts=10,
+                  verbose=False)
+		retval = np.array([self.iso_age, res.x[0], res.x[1], res.fun])
+		#print(chi2)
+		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
+
+	#use 2d KS test to calculate the Metric for the input isochrones
+	def __init__(self, GC_name, mc_num, iso_age,num_stars=60000):
+		#define distance modulus and reddening ranges
+		if GC_name == 'M55':
+			dm_max = 14.1
+			dm_min = 13.8
+			red_max = 0.15
+			red_min = 0.08
+		#define other global variables
+		self.num_stars=num_stars
+		self.mc_num = str(mc_num)
+		self.iso_age = str(iso_age)
+		if GC_name == 'M92':
+			self.feh = 230
+		elif GC_name == 'M55':
+			self.feh = 190
+		#define all the path for read and write
+		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
+		vorbin_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/vorbin".format(GC_name)
+		self.vorbin_path = vorbin_path
+		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)
+		cmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
+		iso_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outiso".format(GC_name)
+		#check those directories exist
+		self.check_file(obs_data_path)
+		self.check_directories(vorbin_path)
+		self.check_directories(chi2_path)
+		self.check_directories(cmd_path)
+		self.check_directories(iso_path)
+		#run code
+		self.read_input(obs_data_path)
+		self.main(cmd_path, dm_max, dm_min, red_max, red_min,chi2_path)
+		print("done mc{}".format(self.mc_num))
+
 
 class resample(utiles):
 
