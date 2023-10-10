@@ -433,21 +433,25 @@ class KS_2d(utiles):
 		dm,red = theta
 		#cut the sCMD data first
 		Obs_DM_Red_CR = self.obs_data - [red, -dm]
-		sCMD_in_range = self.sCMD[(self.sCMD['v'] < self.obs_v_max - dm) & (self.sCMD['v'] > self.obs_v_min - dm)]
-		fit_values = sCMD_in_range.values[:self.num_stars]
-		fit_values[:,1] = -fit_values[:,1]
-		sCMD_emp_ff = LinearNDInterpolator(fit_values, self.rankn(fit_values)/len(fit_values), fill_value=0)
-		sCMD_Pred_cdf = sCMD_emp_ff(Obs_DM_Red_CR)
+		max_v, min_v = max(Obs_DM_Red_CR[:,1]), min(Obs_DM_Red_CR[:,1])
+		fit_values_lower_cut = self.fit_values[self.fit_values[:,1] < min_v]
+		Upper_N_sCMD = len(self.fit_values[self.fit_values[:,1] < max_v])
+		lower_N_sCMD = len(fit_values_lower_cut)
+		N_sCMD = len(self.fit_values)
+		lower_vi = np.sort(fit_values_lower_cut[:,0])
+		sCMD_Pred_cdf = (self.ff(Obs_DM_Red_CR)*N_sCMD - np.searchsorted(lower_vi, Obs_DM_Red_CR[:,0],side='left'))/(Upper_N_sCMD - lower_N_sCMD)
 		mask = (self.Obs_cdf != 0.0) & (sCMD_Pred_cdf != 0.0)
 		return np.max(np.abs(sCMD_Pred_cdf[mask] - self.Obs_cdf[mask]))
 
 	def main(self, cmd_path, dm_max, dm_min, red_max, red_min,chi2_path):
 		age = self.iso_age
 		#read cmd files
-		self.sCMD = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
+		sCMD = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
+		self.fit_values = sCMD.values
+		self.fit_values[:,1] = -self.fit_values[:,1]
+		#find ecdf for the sCMD
+		self.ff = LinearNDInterpolator(self.fit_values, self.rankn(self.fit_values)/len(self.fit_values), fill_value=0)
 		#go through the search process
-		self.obs_v_max = max(-self.obs_data[:,1])
-		self.obs_v_min = min(-self.obs_data[:,1])
 		self.Obs_cdf = self.rankn(self.obs_data)/len(self.obs_data)
 		res = gp_minimize(self.evaluate,                  # the function to minimize
                   [(dm_min, dm_max), (red_min, red_max)],      # the bounds on each dimension of x
@@ -460,7 +464,7 @@ class KS_2d(utiles):
 		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
 
 	#use 2d KS test to calculate the Metric for the input isochrones
-	def __init__(self, GC_name, mc_num, iso_age,num_stars=60000):
+	def __init__(self, GC_name, mc_num, iso_age):
 		#define distance modulus and reddening ranges
 		if GC_name == 'M55':
 			dm_max = 14.1
@@ -468,7 +472,6 @@ class KS_2d(utiles):
 			red_max = 0.15
 			red_min = 0.08
 		#define other global variables
-		self.num_stars=num_stars
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
 		if GC_name == 'M92':
@@ -477,14 +480,12 @@ class KS_2d(utiles):
 			self.feh = 190
 		#define all the path for read and write
 		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
-		vorbin_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/vorbin".format(GC_name)
 		self.vorbin_path = vorbin_path
 		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)
 		cmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
 		iso_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outiso".format(GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
-		self.check_directories(vorbin_path)
 		self.check_directories(chi2_path)
 		self.check_directories(cmd_path)
 		self.check_directories(iso_path)
