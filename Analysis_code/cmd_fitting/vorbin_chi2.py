@@ -420,7 +420,6 @@ class chi2(utiles):
 class KS_2d(utiles):
 	def read_input(self,path):
 		#read M92 observed data
-		obs_data = pd.read_csv(path)
 		# names = ['v','v_err','i','i_err','vi','vi_err','x','y']
 		# for i in range(len(names)):
 		# 	for j in range(len(obs_data.columns)):
@@ -480,7 +479,6 @@ class KS_2d(utiles):
 			self.feh = 190
 		#define all the path for read and write
 		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
-		self.vorbin_path = vorbin_path
 		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)
 		cmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
 		iso_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outiso".format(GC_name)
