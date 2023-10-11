@@ -400,12 +400,12 @@ class chi2(utiles):
 		elif GC_name == 'M55':
 			self.feh = 190
 		#define all the path for read and write
-		obs_data_path = "/work2/08819/mying/{}/simulateCMD/{}_fitstars.dat".format(GC_name,GC_name)
-		vorbin_path = "/work2/08819/mying/{}/vorbin".format(GC_name)
+		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_DRCR.dat".format(GC_name,GC_name)
+		vorbin_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/vorbin".format(GC_name)
 		self.vorbin_path = vorbin_path
-		chi2_path = "/work2/08819/mying/{}/outchi2".format(GC_name)
-		cmd_path = "/work2/08819/mying/{}/simulateCMD/outcmd".format(GC_name)
-		iso_path = "/work2/08819/mying/{}/outiso".format(GC_name)
+		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)
+		cmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
+		iso_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outiso".format(GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		self.check_directories(vorbin_path)
@@ -470,6 +470,11 @@ class KS_2d(utiles):
 			dm_min = 13.8
 			red_max = 0.15
 			red_min = 0.08
+		elif GC_name == 'NGC3201':
+			dm_max = 14.3
+			dm_min = 14.0
+			red_max = 0.30
+			red_min = 0.15
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
@@ -477,6 +482,8 @@ class KS_2d(utiles):
 			self.feh = 230
 		elif GC_name == 'M55':
 			self.feh = 190
+		elif GC_name == 'NGC3201':
+			self.feh = 148
 		#define all the path for read and write
 		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
 		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)

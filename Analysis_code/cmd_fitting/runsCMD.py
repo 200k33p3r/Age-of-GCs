@@ -5,7 +5,7 @@ import time
 
 class sCMD:
 	def CMD_gen(self):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
 
 	def CMD_check(self):
 		check_time = 0
@@ -37,9 +37,14 @@ class sCMD:
 		if GC_name == 'M55':
 			self.feh=190
 			#binary from Milone 2012 A&A 540, A16 (2012)
-			#self.binary=0.04
+			self.binary=0.04
 			#binaries are already included in the phonetric error
-			self.binary=0.00
+			#self.binary=0.00
+			self.pdmf = -0.83
+		elif GC_name == 'NGC3201':
+			self.feh=148
+			self.binary=0.061
+			self.pdmf = -1.22
 		self.mc_num = str(mc_num)
 		if float(age) < 10000:
 			self.age = '0'+str(age)
