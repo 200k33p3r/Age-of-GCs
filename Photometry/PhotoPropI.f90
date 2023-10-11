@@ -11,11 +11,11 @@ program PhotoPropI
   ! assumses a guess center of cluster is at  3000,3000
   ! go +/- 2.0 mag around the SGB point 
    !  Variable Declarations
-  real, parameter :: Vmax = -10.7
-  real, parameter :: Vmin = -16.683
-  real, parameter :: IImax = -10.568
-  real, parameter :: IImin = -16.737
-  real, parameter,dimension(2) :: short_long = [-14.08, -14.14]
+  real, parameter :: Vmax = -11.95
+  real, parameter :: Vmin = -15.9493
+  real, parameter :: IImax = -11.8401
+  real, parameter :: IImin = -15.993
+  real, parameter,dimension(2) :: short_long = [-14.18, -14.183]
   !magnitude between short and long exposures, first F606W and then F814W!
 !  real, parameter :: Ishort_long = -13.9
   integer, parameter :: Nmagbins = 12 !totalnumber of mag bins (must be even)
