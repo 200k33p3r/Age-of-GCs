@@ -22,7 +22,12 @@ class sCMD:
 			self.CMD_gen()
 	
 	def run_vorbin(self):
-		vorbin_chi2.chi2(self.GC_name, self.mc_num, self.age)
+		if self.method == 'Vorbin':
+			vorbin_chi2.chi2(self.GC_name, self.mc_num, self.age,UniSN=False, write_vorbin=False)
+		elif self.method == 'KS2d':
+			vorbin_chi2.KS_2d(self.GC_name,self. mc_num, self.age)
+		else:
+			raise Exception('Cannot find the method to be used to analyse CMD')
 
 	def rmCMD(self):
 		#remove searched sCMD file
@@ -30,10 +35,11 @@ class sCMD:
 		path = os.path.join(self.outcmd_path, file)
 		os.remove(path)
 
-	def __init__(self, GC_name, mc_num, age):
+	def __init__(self, GC_name, mc_num, age, method):
 		#define global variables
 		self.outcmd_path = "/work2/08819/mying/{}/simulateCMD/outcmd".format(GC_name)
 		self.GC_name = str(GC_name)
+		self.method = str(method)
 		if GC_name == 'M55':
 			self.feh=190
 			#binary from Milone 2012 A&A 540, A16 (2012)

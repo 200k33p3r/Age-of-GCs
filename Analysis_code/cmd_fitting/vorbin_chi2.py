@@ -259,13 +259,18 @@ class chi2(utiles):
 
 	def read_input(self,path):
 		#read M92 observed data
-		obs_data = pd.read_csv(path)
+		if self.feh == 148:
+			#read NGC3201 DRCR data
+			obs_data = pd.read_csv(path)
+			obs_data['vi'] = obs_data['v'] - obs_data['i']
+		else:
+			obs_data = pd.read_csv(path)
 		names = ['v','v_err','i','i_err','vi','vi_err','x','y']
 		for i in range(len(names)):
 			for j in range(len(obs_data.columns)):
 				if names[i] == obs_data.columns[j]:
 					setattr(self,names[i] + '_idx', j)
-		self.obs_data = pd.read_csv(path).to_numpy()
+		self.obs_data = obs_data.to_numpy()
 		#self.obs_size = len(self.obs_data)
 
 	def main(self,write_vorbin,path, dm_max, dm_min, red_max, red_min, iso_path,chi2_path,write_chi2_log=False,UniSN=False):
@@ -391,6 +396,11 @@ class chi2(utiles):
 			dm_min = 13.8
 			red_max = 0.15
 			red_min = 0.08
+		elif GC_name == 'NGC3201':
+			dm_max = 14.3
+			dm_min = 14.0
+			red_max = 0.30
+			red_min = 0.15
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
@@ -399,6 +409,8 @@ class chi2(utiles):
 			self.feh = 230
 		elif GC_name == 'M55':
 			self.feh = 190
+		elif GC_name == 'NGC3201':
+			self.feh=148
 		#define all the path for read and write
 		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_DRCR.dat".format(GC_name,GC_name)
 		vorbin_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/vorbin".format(GC_name)
