@@ -16,15 +16,37 @@ def main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, 
     return dp
 
 def run_analysis(iso_path, star_path,wrt_path,Consider_Lumi=True,iso_D=True):
+    name_lists = ['Names','M/Ms','+dM/Ms','-dM/Ms','L/Ls','+dL/Ls','-dL/Ls','R/Rs','+dR/Rs','-dR/Rs']
     check_file(iso_path)
     check_file(star_path)
-    Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err = read_candidates(star_path)
+    dp = read_candidates(star_path,name_lists)
+    Names = dp['Names'].values
+    Mass_star = dp['M/Ms'].values
+    Mass_star_p_err = dp['+dM/Ms'].values
+    Mass_star_m_err = dp['-dM/Ms'].values
+    Lumi_star = dp['L/Ls'].values
+    Lumi_star_p_err = dp['+dL/Ls'].values
+    Lumi_star_m_err = dp['-dL/Ls'].values
+    Rad_star = dp['R/Rs'].values
+    Rad_star_p_err = dp['+dR/Rs'].values
+    Rad_star_m_err = dp['-dR/Rs'].values
     dp = main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err,Consider_Lumi,iso_D)
     writeout(dp,wrt_path)
 
 def find_eeps(iso_paths, star_path, wrt_path, Consider_Lumi=True,iso_D=True):
+    name_lists = ['Names','M/Ms','+dM/Ms','-dM/Ms','L/Ls','+dL/Ls','-dL/Ls','R/Rs','+dR/Rs','-dR/Rs']
     check_file(star_path)
-    Names, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err = read_candidates(star_path)
+    dp = read_candidates(star_path,name_lists)
+    Names = dp['Names'].values
+    Mass_star = dp['M/Ms'].values
+    Mass_star_p_err = dp['+dM/Ms'].values
+    Mass_star_m_err = dp['-dM/Ms'].values
+    Lumi_star = dp['L/Ls'].values
+    Lumi_star_p_err = dp['+dL/Ls'].values
+    Lumi_star_m_err = dp['-dL/Ls'].values
+    Rad_star = dp['R/Rs'].values
+    Rad_star_p_err = dp['+dR/Rs'].values
+    Rad_star_m_err = dp['-dR/Rs'].values    
     for iso_path in iso_paths:
         check_file(iso_path)
         mc_num, df_iso, age_list = read_iso(iso_path,iso_D=iso_D)

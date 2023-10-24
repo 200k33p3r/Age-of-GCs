@@ -12,20 +12,12 @@ def check_file(path):
     if os.path.exists(path) == False:
         raise Exception("Cannot find inputfile at {}".format(path))
 
-def read_candidates(star_path):
+def read_candidates(star_path, input_headers):
     dp = pd.read_csv(star_path)
-    N_stars = len(dp)
-    Names = dp['Names'].values
-    Mass_star = dp['M/Ms'].values
-    Mass_star_p_err = dp['+dM/Ms'].values
-    Mass_star_m_err = dp['-dM/Ms'].values
-    Lumi_star = dp['L/Ls'].values
-    Lumi_star_p_err = dp['+dL/Ls'].values
-    Lumi_star_m_err = dp['-dL/Ls'].values
-    Rad_star = dp['R/Rs'].values
-    Rad_star_p_err = dp['+dR/Rs'].values
-    Rad_star_m_err = dp['-dR/Rs'].values
-    return Names, Mass_star.reshape((N_stars, 1, 1)), Mass_star_p_err, Mass_star_m_err, Lumi_star.reshape((N_stars, 1, 1)), Lumi_star_p_err, Lumi_star_m_err, Rad_star.reshape((N_stars, 1, 1)), Rad_star_p_err, Rad_star_m_err
+    try:
+        return dp[input_headers]
+    except:
+        raise Exception("Cannot find the corresponing header in Candidate files")
 
 def determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
     N_stars = len(Mass_star)
@@ -78,195 +70,192 @@ def determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star
             chi2_data[:,i] = indi_fit
     return age_list, chi2_data.astype(int)
 
-def calculate_chi2(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
-    #Case 1: 1 set of isochrones fitted to 1 set of stars
-    #Case 2: Mutiple set of isochrones fitted to 1 set of stars
-    #Case 3: 1 set of isochrones fitted to mutiple sets of stars
-    #Case 4: Mutiple set of isochrones fitted to mutiple sets of stars
+# def calculate_chi2(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
+#     #Case 1: 1 set of isochrones fitted to 1 set of stars
+#     #Case 2: Mutiple set of isochrones fitted to 1 set of stars
+#     #Case 3: 1 set of isochrones fitted to mutiple sets of stars
+#     #Case 4: Mutiple set of isochrones fitted to mutiple sets of stars
     
-    #Get iso values
-    Mass_iso = df_iso.loc[(slice(None),'Mass'),:].copy().values
-    if Consider_Lumi == True:
-        Lumi_iso = df_iso.loc[(slice(None),'Lumi'),:].copy().values
-    Rad_iso = df_iso.loc[(slice(None),'Rad'),:].copy().values
-    #Determine which case are we evaluating
-    N_stars, num_sample, _ = np.shape(Mass_star)
-    N_iso, _ = np.shape(Mass_iso)
-    #define the matrix value
-    chi2_data = np.zeros((max(N_iso, num_sample), N_stars))
-    #Case 4
-    if num_sample > 1 and N_iso > 1:
-        raise Exception("Cannot fit multiple isochrones to mutiple sets of stars simultaniously")
-    else:
-        #calculate difference
-        Mass = Mass_iso - Mass_star
-        Rad = Rad_iso - Rad_star
-        #find whether the difference is greater than 0 or not
-        Mass_TF = Mass > 0
-        Rad_TF = Rad > 0
-        #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
-        Mass_chi2 = np.array([np.divide(Mass[i],np.where(Mass_TF[i],Mass_star_p_err[i],Mass_star_m_err[i])) for i in range(N_stars)])
-        Rad_chi2 = np.array([np.divide(Rad[i],np.where(Rad_TF[i],Rad_star_p_err[i],Rad_star_m_err[i])) for i in range(N_stars)])
-        #square the result
-        Mass_chi2 = np.square(Mass_chi2)
-        Rad_chi2 = np.square(Rad_chi2)
-        if Consider_Lumi == True:
-            #Calculate Lumi only if Consider_Lumi = True
-            Lumi = Lumi_iso - Lumi_star
-            Lumi_TF = Lumi > 0
-            Lumi_chi2 = np.array([np.divide(Lumi[i],np.where(Lumi_TF[i],Lumi_star_p_err[i],Lumi_star_m_err[i])) for i in range(N_stars)])
-            Lumi_chi2 = np.square(Lumi_chi2)
-            chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
-        else:
-            chi2 = Mass_chi2 + Rad_chi2
-        chi2_data = np.min(chi2,axis=2)
-    #Case 3: np.shape(chi2_data) = (num_star, num_resample)
-    #Case 2: np.shape(chi2_data) = (num_star, num_iso)
-    #Case 1: np.shape(chi2_data) = (num_star, 1)
-    return chi2_data.T
+#     #Get iso values
+#     Mass_iso = df_iso.loc[(slice(None),'Mass'),:].copy().values
+#     if Consider_Lumi == True:
+#         Lumi_iso = df_iso.loc[(slice(None),'Lumi'),:].copy().values
+#     Rad_iso = df_iso.loc[(slice(None),'Rad'),:].copy().values
+#     #Determine which case are we evaluating
+#     N_stars, num_sample, _ = np.shape(Mass_star)
+#     N_iso, _ = np.shape(Mass_iso)
+#     #define the matrix value
+#     chi2_data = np.zeros((max(N_iso, num_sample), N_stars))
+#     #Case 4
+#     if num_sample > 1 and N_iso > 1:
+#         raise Exception("Cannot fit multiple isochrones to mutiple sets of stars simultaniously")
+#     else:
+#         #calculate difference
+#         Mass = Mass_iso - Mass_star
+#         Rad = Rad_iso - Rad_star
+#         #find whether the difference is greater than 0 or not
+#         Mass_TF = Mass > 0
+#         Rad_TF = Rad > 0
+#         #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
+#         Mass_chi2 = np.array([np.divide(Mass[i],np.where(Mass_TF[i],Mass_star_p_err[i],Mass_star_m_err[i])) for i in range(N_stars)])
+#         Rad_chi2 = np.array([np.divide(Rad[i],np.where(Rad_TF[i],Rad_star_p_err[i],Rad_star_m_err[i])) for i in range(N_stars)])
+#         #square the result
+#         Mass_chi2 = np.square(Mass_chi2)
+#         Rad_chi2 = np.square(Rad_chi2)
+#         if Consider_Lumi == True:
+#             #Calculate Lumi only if Consider_Lumi = True
+#             Lumi = Lumi_iso - Lumi_star
+#             Lumi_TF = Lumi > 0
+#             Lumi_chi2 = np.array([np.divide(Lumi[i],np.where(Lumi_TF[i],Lumi_star_p_err[i],Lumi_star_m_err[i])) for i in range(N_stars)])
+#             Lumi_chi2 = np.square(Lumi_chi2)
+#             chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
+#         else:
+#             chi2 = Mass_chi2 + Rad_chi2
+#         chi2_data = np.min(chi2,axis=2)
+#     #Case 3: np.shape(chi2_data) = (num_star, num_resample)
+#     #Case 2: np.shape(chi2_data) = (num_star, num_iso)
+#     #Case 1: np.shape(chi2_data) = (num_star, 1)
+#     return chi2_data.T
 
-    
+def calculate_chi2(candidates_df, iso_df, chi2_columns,target_ages):
+    isochrones = [iso_df[iso_df['Age'] == age] for age in target_ages]
+    candidate_pos_err = candidates_df[['+d' + name for name in chi2_columns]].values
+    candidate_neg_err = candidates_df[['-d' + name for name in chi2_columns]].values
+    choice = np.array([candidate_neg_err,candidate_pos_err])
+    min_chi2_list = []
+    for isochrone in isochrones:
+        Diff = candidates_df[chi2_columns].values - isochrone[chi2_columns].values
+        condition = np.where(Diff > 0, 1, 0)
+        Errs = np.choose(condition,choice)
+        chi2_indiv = np.square(np.divide(Diff,Errs))
+        min_iso_chi2 = np.min(np.sum(np.sum(chi2_indiv, axis=2),axis=1))
+        min_chi2_list.append(min_iso_chi2)
+    return min_chi2_list
+        
 
-
-
-    # #define the matrix value
-    # age_num = len(df_iso.index.get_level_values(0).unique())
-    # resample_num = 
-    # Mass_iso = df_iso.loc[(slice(None),'Mass'),:].copy().values
-    # Lumi_iso = df_iso.loc[(slice(None),'Lumi'),:].copy().values
-    # Rad_iso = df_iso.loc[(slice(None),'Rad'),:].copy().values
-    # chi2_data = np.zeros((age_num, N_stars))
-    # if Consider_Lumi == True:
-    #     for i in range(N_stars):
-    #         Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
-    #         Lumi = df_iso.loc[(slice(None),'Lumi'),:].copy().values
-    #         Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
-    #         if len(Mass) == 1:
-    #             Mass = Mass[0]
-    #             Lumi = Lumi[0]
-    #             Rad = Rad[0]
-    #         #calculate difference
-    #         Mass = Mass - Mass_star[i]
-    #         Lumi = Lumi - Lumi_star[i]
-    #         Rad = Rad - Rad_star[i]
-    #         #find whether the difference is greater than 0 or not
-    #         Mass_TF = Mass > 0
-    #         Lumi_TF = Lumi > 0
-    #         Rad_TF = Rad > 0
-    #         #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
-    #         Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
-    #         Lumi_chi2 = np.divide(Lumi,np.where(Lumi_TF,Lumi_star_p_err[i],Lumi_star_m_err[i]))
-    #         Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
-    #         #square the result
-    #         Mass_chi2 = np.square(Mass_chi2)
-    #         Lumi_chi2 = np.square(Lumi_chi2)
-    #         Rad_chi2 = np.square(Rad_chi2)
-    #         chi2 = Mass_chi2 + Lumi_chi2 + Rad_chi2
-    #         indi_fit = np.min(chi2,axis=1)
-    #         chi2_data[:,i] = indi_fit
-    # else:
-    #     for i in range(N_stars):
-    #         Mass = df_iso.loc[(slice(None),'Mass'),:].copy().values
-    #         Rad = df_iso.loc[(slice(None),'Rad'),:].copy().values
-    #         #calculate difference
-    #         Mass -= Mass_star[i]
-    #         Rad -= Rad_star[i]
-    #         #find whether the difference is greater than 0 or not
-    #         Mass_TF = Mass > 0
-    #         Rad_TF = Rad > 0
-    #         #for each star, evaluate whether the difference is positive or not. Then divide by the corresponding uncertainty
-    #         Mass_chi2 = np.divide(Mass,np.where(Mass_TF,Mass_star_p_err[i],Mass_star_m_err[i]))
-    #         Rad_chi2 = np.divide(Rad,np.where(Rad_TF,Rad_star_p_err[i],Rad_star_m_err[i]))
-    #         #square the result
-    #         Mass_chi2 = np.square(Mass_chi2)
-    #         Rad_chi2 = np.square(Rad_chi2)
-    #         chi2 = Mass_chi2 + Rad_chi2
-    #         indi_fit = np.min(chi2,axis=1)
-    #         chi2_data[:,i] = indi_fit
-    # return chi2_data
 
 def writeout(dp,wrt_path):
     dp.to_csv(wrt_path,index=False,mode='a',header=not os.path.exists(wrt_path))
 
-def read_iso(iso_path, max_eep=1500 ,age_list: Union[bool, FARRAY_1D] = np.linspace(8000,16000,81).astype(int),param_list=np.array(['Mass', 'Lumi', 'Rad']), iso_D = False):
+# def read_iso(iso_path, iso_headers, output_format, max_eep=1500 ,age_list: Union[bool, FARRAY_1D] = np.linspace(8000,16000,81).astype(int),param_list=np.array(['Mass', 'Lumi', 'Rad'])):
+#     check_file(iso_path)
+#     mc_num = int(iso_path[-5:])
+#     iso = open(iso_path, 'r')
+#     len_file = len(iso.readlines())
+#     iso.seek(0)
+#     len_idx = 1
+#     if len_file < 10:
+#         iso.close()
+#         raise Exception("Empty file")
+#     else:
+#         if output_format == 'DSEP_iso':
+#             if age_list == 'Unknown':
+#                 age_list = []
+#                 while len_idx <= len_file:
+#                     #look for how many ages it contains
+#                     iso.readline()
+#                     RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
+#                     npts = int(RAW_NPTS[1:])
+#                     age_list.append(int(AGE[:-1]))
+#                     iso.readline()
+#                     len_idx += 3
+#                     for i in range(npts):
+#                         iso.readline()
+#                     len_idx += npts
+#                     iso.readline()
+#                     iso.readline()
+#                     len_idx += 2
+#                 #return to default
+#                 iso.seek(0)
+#                 len_idx = 1
+#                 age_list = np.array(age_list)
+#             #generate Mutiindex dataframe
+#             num_age = len(age_list)
+#             num_param = len(param_list)
+#             arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
+#             data = np.full((num_age*num_param, max_eep),np.inf)
+#             data_idx = 0
+#             while len_idx <= len_file:
+#                 #skip header
+#                 iso.readline()
+#                 RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
+#                 npts = int(RAW_NPTS[1:])
+#                 # Mass = np.zeros(npts)
+#                 # Lumi = np.zeros(npts)
+#                 # Rad = np.zeros(npts)
+#                 #skip header
+#                 iso.readline()
+#                 len_idx += 3
+#                 for i in range(npts):
+#                     EEP,MMs,LogG,LogTeff,LogLLs,LogRRs = iso.readline().split()
+#                     # Mass[i] = float(MMs)
+#                     # Lumi[i] = float(LogLLs)
+#                     # Rad[i] = float(LogRRs)
+#                     data[data_idx,i] = float(MMs)
+#                     data[data_idx+1,i] = 10**float(LogLLs)
+#                     data[data_idx+2,i] = 10**float(LogRRs)
+#                 data_idx += 3
+#                 len_idx += npts
+#                 iso.readline()
+#                 iso.readline()
+#                 len_idx += 2
+#             iso.close()
+#         else:
+#             iso.close()
+#             #generate Mutiindex dataframe
+#             num_age = len(age_list)
+#             num_param = len(param_list)
+#             arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
+#             data = np.full((num_age*num_param, max_eep),np.inf)
+#             #read in isochrone file
+#             df = pd.read_csv(iso_path)
+#             df['Age'] = (df['Age']/10**6).astype(int)
+#             for i, age in enumerate(age_list):
+#                 data[3*i,df[df['Age'] == age]['EEP']] = df[df['Age'] == age]['MMs']
+#                 data[3*i+1,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogLLs'])
+#                 data[3*i+2,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogRRs'])
+#         df = pd.DataFrame(data,index=arrays)
+#     return mc_num, df, age_list
+def read_iso(iso_path, iso_header, output_format, Take_exp = None):
     check_file(iso_path)
     mc_num = int(iso_path[-5:])
     iso = open(iso_path, 'r')
     len_file = len(iso.readlines())
     iso.seek(0)
-    len_idx = 1
+    iso.close()
     if len_file < 10:
-        iso.close()
         raise Exception("Empty file")
     else:
-        if iso_D == False:
-            if age_list == 'Unknown':
-                age_list = []
-                while len_idx <= len_file:
-                    #look for how many ages it contains
-                    iso.readline()
-                    RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
-                    npts = int(RAW_NPTS[1:])
-                    age_list.append(int(AGE[:-1]))
-                    iso.readline()
-                    len_idx += 3
-                    for i in range(npts):
-                        iso.readline()
-                    len_idx += npts
-                    iso.readline()
-                    iso.readline()
-                    len_idx += 2
-                #return to default
-                iso.seek(0)
-                len_idx = 1
-                age_list = np.array(age_list)
-            #generate Mutiindex dataframe
-            num_age = len(age_list)
-            num_param = len(param_list)
-            arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
-            data = np.full((num_age*num_param, max_eep),np.inf)
-            data_idx = 0
-            while len_idx <= len_file:
-                #skip header
-                iso.readline()
-                RAW_NPTS,MIXLEN,OVERSH,AGE,Y,Z,ZEFF,FeH,alphaFe = iso.readline().split()
-                npts = int(RAW_NPTS[1:])
-                # Mass = np.zeros(npts)
-                # Lumi = np.zeros(npts)
-                # Rad = np.zeros(npts)
-                #skip header
-                iso.readline()
-                len_idx += 3
-                for i in range(npts):
-                    EEP,MMs,LogG,LogTeff,LogLLs,LogRRs = iso.readline().split()
-                    # Mass[i] = float(MMs)
-                    # Lumi[i] = float(LogLLs)
-                    # Rad[i] = float(LogRRs)
-                    data[data_idx,i] = float(MMs)
-                    data[data_idx+1,i] = 10**float(LogLLs)
-                    data[data_idx+2,i] = 10**float(LogRRs)
-                data_idx += 3
-                len_idx += npts
-                iso.readline()
-                iso.readline()
-                len_idx += 2
-            iso.close()
-        else:
-            iso.close()
-            #generate Mutiindex dataframe
-            num_age = len(age_list)
-            num_param = len(param_list)
-            arrays = [np.repeat(age_list,num_param),np.repeat(param_list.reshape(1,num_param),num_age, axis=0).reshape(num_age*num_param)]
-            data = np.full((num_age*num_param, max_eep),np.inf)
-            #read in isochrone file
-            df = pd.read_csv(iso_path)
-            df['Age'] = (df['Age']/10**6).astype(int)
-            for i, age in enumerate(age_list):
-                data[3*i,df[df['Age'] == age]['EEP']] = df[df['Age'] == age]['MMs']
-                data[3*i+1,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogLLs'])
-                data[3*i+2,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogRRs'])
-        df = pd.DataFrame(data,index=arrays)
-    return mc_num, df, age_list
+        if output_format == 'DSEP_iso':
+        #original DSED isochrone format
+            df = pd.read_csv(iso_path,sep='\s+',header=None)
+            start_indices = df[df[0] == '#EEP'].index
+            end_indices = df[df[0] == '#NPTS'].index
+            retval = []
+            for i in range(len(start_indices)):
+                if i < len(start_indices) - 1:
+                    sin_age_iso = df.iloc[start_indices[i] + 1:end_indices[i+1]].dropna(axis=1)
+                else:
+                    sin_age_iso = df.iloc[start_indices[i] + 1:].dropna(axis=1)
+                eeps = sin_age_iso[0].values
+                #remove *
+                for j in range(len(eeps)):
+                    if eeps[j][-1] == '*':
+                        eeps[j] = eeps[j][:-1]
+                sin_age_iso[0] = eeps.astype(int)
+                sin_age_iso.columns = iso_header
+                sin_age_iso['Age'] = int(float(df.iloc[end_indices[i]+1][3]))
+                retval.append(sin_age_iso)
+            iso_df = pd.concat(retval)
+            iso_df[iso_header].astype(float)
+            if Take_exp != None:
+                iso_df[Take_exp] = 10**(iso_df[Take_exp].values)
+        elif output_format == 'iso_D':
+        #new format
+            iso_df = pd.read_csv(iso_path)
+    return mc_num, iso_df
+
+
 
 def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, resample_num,EEPs=None,Uniform_Resample=True):
     #given the information about an isochrone, and the observed binaries, we redraw stars from the theoretical isochrone with know uncertainty.
