@@ -121,15 +121,18 @@ def calculate_chi2(candidates_df, iso_df, chi2_columns,target_ages):
     isochrones = [iso_df[iso_df['Age'] == age] for age in target_ages]
     candidate_pos_err = candidates_df[['+d' + name for name in chi2_columns]].values
     candidate_neg_err = candidates_df[['-d' + name for name in chi2_columns]].values
+    Nstars = len(candidates_df)
     choice = np.array([candidate_neg_err,candidate_pos_err])
-    min_chi2_list = []
-    for isochrone in isochrones:
+    min_chi2_list = np.zeros((len(target_ages), Nstars))
+    for i, isochrone in enumerate(isochrones):
         Diff = candidates_df[chi2_columns].values - isochrone[chi2_columns].values
         condition = np.where(Diff > 0, 1, 0)
         Errs = np.choose(condition,choice)
-        chi2_indiv = np.square(np.divide(Diff,Errs))
-        min_iso_chi2 = np.min(np.sum(np.sum(chi2_indiv, axis=2),axis=1))
-        min_chi2_list.append(min_iso_chi2)
+        chi2_indiv = np.sum(np.square(np.divide(Diff,Errs)),axis=2)
+        indiv_idx = np.argmin(chi2_indiv,axis=0)
+        for j in range(Nstars):
+            min_chi2_list[i,j] = chi2_indiv[indiv_idx[j],j]
+    #return the min chi2 value for individual stars with respect to individual 
     return min_chi2_list
         
 
