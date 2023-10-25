@@ -77,3 +77,23 @@ def fit_rml(iso_path, star_path, wrt_path, iso_format='iso_D',metric_headers=['R
     dp['chi2'] = np.sum(chi2_data,axis=1)
     dp['Age'] = target_ages
     writeout(dp,wrt_path)
+
+#calculate the chi2 value on the cmd plane for individual stars
+def fit_cmd(iso_path, star_path, wrt_path, iso_format='DSEP_iso',metric_headers=['F606W','F606W-F814W'],target_ages=np.linspace(8000,16000,81).astype(int)):
+    check_file(iso_path)
+    check_file(star_path)
+    #the default format is the old isochrone format
+    if iso_format == 'iso_D':
+        iso_header=['EEP','M/Ms','F606W','F606W-F814W']
+        Take_exp=None
+    #read candidates
+    Obs_stars = read_candidates(star_path)
+    #read in isochrones
+    mc_num, df_iso = read_iso(iso_path,iso_header,iso_format,Take_exp=Take_exp)
+    #calculate chi2
+    chi2_data = calculate_chi2(Obs_stars, df_iso, metric_headers,target_ages)
+    dp = pd.DataFrame(data=chi2_data,columns=Obs_stars['Names'].values)
+    dp['mc_num'] = np.full(len(dp),mc_num)
+    dp['chi2'] = np.sum(chi2_data,axis=1)
+    dp['Age'] = target_ages
+    writeout(dp,wrt_path)

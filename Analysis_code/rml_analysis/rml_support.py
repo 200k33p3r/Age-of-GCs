@@ -258,39 +258,52 @@ def read_iso(iso_path, iso_header, output_format, Take_exp = None):
 
 
 
-def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, resample_num,EEPs=None,Uniform_Resample=True):
-    #given the information about an isochrone, and the observed binaries, we redraw stars from the theoretical isochrone with know uncertainty.
-    #If Uniform_Resample == True, we draw stars uniformly from the center 50% of the isochrones
-    #Otherwise, we choose resample stars from +/- 3 eeps from the given eep point
-    num_stars = len(Mass_star)
-    iso_Mass = df_iso.loc['Mass'].values
-    iso_Lumi = df_iso.loc['Lumi'].values
-    iso_Rad = df_iso.loc['Rad'].values
-    if Uniform_Resample == True:
-        iso_TF = iso_Mass < np.inf
-        iso_Mass = iso_Mass[iso_TF]
-        iso_Lumi = iso_Lumi[iso_TF]
-        iso_Rad = iso_Rad[iso_TF]
-        pick_idx = np.random.choice(range(int(len(iso_Mass)/4),len(iso_Mass) - int(len(iso_Mass)/4)), size=(num_stars, resample_num), replace=True)
-    else:
-        pick_idx = np.array([np.random.choice(range(EEPs[i]-3,EEPs[i]+3), size=resample_num, replace=True) for i in range(num_stars)])
-    Mass_alter = iso_Mass[pick_idx]
-    Lumi_alter = iso_Lumi[pick_idx]
-    Rad_alter = iso_Rad[pick_idx]
-    M_p_re = np.abs(np.random.normal(scale=np.repeat(Mass_star_p_err.reshape(num_stars,1),resample_num,axis=1)))
-    M_m_re = - np.abs(np.random.normal(scale=np.repeat(Mass_star_m_err.reshape(num_stars,1),resample_num,axis=1)))
-    M_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
-    M_err = np.multiply(M_p_re,M_TF) + np.multiply(M_m_re, (M_TF - 1)*-1)
-    R_p_re = np.abs(np.random.normal(scale=np.repeat(Rad_star_p_err.reshape(num_stars,1),resample_num,axis=1)))
-    R_m_re = - np.abs(np.random.normal(scale=np.repeat(Rad_star_m_err.reshape(num_stars,1),resample_num,axis=1)))
-    R_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
-    R_err = np.multiply(R_p_re,R_TF) + np.multiply(R_m_re, (R_TF - 1)*-1)
-    L_p_re = np.abs(np.random.normal(scale=np.repeat(Lumi_star_p_err.reshape(num_stars,1),resample_num,axis=1)))
-    L_m_re = - np.abs(np.random.normal(scale=np.repeat(Lumi_star_m_err.reshape(num_stars,1),resample_num,axis=1)))
-    L_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
-    L_err = np.multiply(L_p_re,L_TF) + np.multiply(L_m_re, (L_TF - 1)*-1)
-    #return mass lumi and rad for resampled stars
-    return (Mass_alter + M_err).reshape((num_stars, resample_num, 1)), (Lumi_alter + L_err).reshape((num_stars, resample_num, 1)), (Rad_alter + R_err).reshape((num_stars, resample_num, 1))
+# def resample_stars(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, resample_num,EEPs=None,Uniform_Resample=True):
+#     #given the information about an isochrone, and the observed binaries, we redraw stars from the theoretical isochrone with know uncertainty.
+#     #If Uniform_Resample == True, we draw stars uniformly from the center 50% of the isochrones
+#     #Otherwise, we choose resample stars from +/- 3 eeps from the given eep point
+#     num_stars = len(Mass_star)
+#     iso_Mass = df_iso.loc['Mass'].values
+#     iso_Lumi = df_iso.loc['Lumi'].values
+#     iso_Rad = df_iso.loc['Rad'].values
+#     if Uniform_Resample == True:
+#         iso_TF = iso_Mass < np.inf
+#         iso_Mass = iso_Mass[iso_TF]
+#         iso_Lumi = iso_Lumi[iso_TF]
+#         iso_Rad = iso_Rad[iso_TF]
+#         pick_idx = np.random.choice(range(int(len(iso_Mass)/4),len(iso_Mass) - int(len(iso_Mass)/4)), size=(num_stars, resample_num), replace=True)
+#     else:
+#         pick_idx = np.array([np.random.choice(range(EEPs[i]-3,EEPs[i]+3), size=resample_num, replace=True) for i in range(num_stars)])
+#     Mass_alter = iso_Mass[pick_idx]
+#     Lumi_alter = iso_Lumi[pick_idx]
+#     Rad_alter = iso_Rad[pick_idx]
+#     M_p_re = np.abs(np.random.normal(scale=np.repeat(Mass_star_p_err.reshape(num_stars,1),resample_num,axis=1)))
+#     M_m_re = - np.abs(np.random.normal(scale=np.repeat(Mass_star_m_err.reshape(num_stars,1),resample_num,axis=1)))
+#     M_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
+#     M_err = np.multiply(M_p_re,M_TF) + np.multiply(M_m_re, (M_TF - 1)*-1)
+#     R_p_re = np.abs(np.random.normal(scale=np.repeat(Rad_star_p_err.reshape(num_stars,1),resample_num,axis=1)))
+#     R_m_re = - np.abs(np.random.normal(scale=np.repeat(Rad_star_m_err.reshape(num_stars,1),resample_num,axis=1)))
+#     R_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
+#     R_err = np.multiply(R_p_re,R_TF) + np.multiply(R_m_re, (R_TF - 1)*-1)
+#     L_p_re = np.abs(np.random.normal(scale=np.repeat(Lumi_star_p_err.reshape(num_stars,1),resample_num,axis=1)))
+#     L_m_re = - np.abs(np.random.normal(scale=np.repeat(Lumi_star_m_err.reshape(num_stars,1),resample_num,axis=1)))
+#     L_TF = np.random.choice(a=[1, 0], size=(num_stars, resample_num))
+#     L_err = np.multiply(L_p_re,L_TF) + np.multiply(L_m_re, (L_TF - 1)*-1)
+#     #return mass lumi and rad for resampled stars
+#     return (Mass_alter + M_err).reshape((num_stars, resample_num, 1)), (Lumi_alter + L_err).reshape((num_stars, resample_num, 1)), (Rad_alter + R_err).reshape((num_stars, resample_num, 1))
+
+def resample_stars(df_iso, candidates_df, resample_header):
+    #define names
+    resample_candidates = df_iso['Names'].copy()
+    #randomly pick from the middle 80% of eeps in isochrones
+    resample_idx = np.random.choice(range(int(0.1*len(df_iso)),int(0.9*len(df_iso))), size=len(candidates_df))
+    #read in uncertainty
+    candidate_pos_err = candidates_df[['+d' + name for name in resample_header]].values
+    candidate_neg_err = candidates_df[['-d' + name for name in resample_header]].values
+    #choose which size of curve to shift to
+    err_idx = np.random.choice(a=[0,1],size=np.shape(candidate_pos_err))
+    #take gaussian of uncertainty and add back to the selected eep point
+    return candidates_df[resample_header].iloc[resample_idx].values + np.multiply(np.abs(np.random.normal(scale=candidate_pos_err)), err_idx) - np.multiply(np.abs(np.random.normal(scale=candidate_neg_err)), 1 - err_idx)
 
 def read_eeps(eep_path):
     check_file(eep_path)
