@@ -15,7 +15,7 @@ def main(iso_path,Names,Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, 
     dp['Age'] = age_list
     return dp
 
-def run_analysis(iso_path, star_path,wrt_path,Consider_Lumi=True,iso_D=True):
+def run_analysis(iso_path, star_path,wrt_path,iso_format='iso_D', iso_header=['EEP','Age','M/Ms','L/Ls','R/Rs']):
     name_lists = ['Names','M/Ms','+dM/Ms','-dM/Ms','L/Ls','+dL/Ls','-dL/Ls','R/Rs','+dR/Rs','-dR/Rs']
     check_file(iso_path)
     check_file(star_path)
