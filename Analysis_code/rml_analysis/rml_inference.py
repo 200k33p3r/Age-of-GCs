@@ -67,7 +67,7 @@ def fit_rml(iso_path, star_path, wrt_path, iso_format='iso_D',metric_headers=['R
         iso_header=['EEP','M/Ms','LogG','LogTeff','L/Ls','R/Rs']
         Take_exp = ['L/Ls','R/Rs']
     #read candidates
-    Obs_stars = read_candidates(star_path,metric_headers)
+    Obs_stars = read_candidates(star_path)
     #read in isochrones
     mc_num, df_iso = read_iso(iso_path,iso_header,iso_format,Take_exp=Take_exp)
     #calculate chi2

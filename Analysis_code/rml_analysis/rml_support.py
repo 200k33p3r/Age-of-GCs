@@ -2,6 +2,7 @@
 
 import warnings
 import numpy as np
+from numpy import newaxis
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import os
@@ -12,12 +13,9 @@ def check_file(path):
     if os.path.exists(path) == False:
         raise Exception("Cannot find inputfile at {}".format(path))
 
-def read_candidates(star_path, input_headers):
+def read_candidates(star_path):
     dp = pd.read_csv(star_path)
-    try:
-        return dp[input_headers]
-    except:
-        raise Exception("Cannot find the corresponing header in Candidate files")
+    return dp
 
 def determine_EEP(df_iso, Mass_star, Mass_star_p_err, Mass_star_m_err, Lumi_star, Lumi_star_p_err, Lumi_star_m_err, Rad_star, Rad_star_p_err, Rad_star_m_err, Consider_Lumi=True):
     N_stars = len(Mass_star)
@@ -125,7 +123,7 @@ def calculate_chi2(candidates_df, iso_df, chi2_columns,target_ages):
     choice = np.array([candidate_neg_err,candidate_pos_err])
     min_chi2_list = np.zeros((len(target_ages), Nstars))
     for i, isochrone in enumerate(isochrones):
-        Diff = candidates_df[chi2_columns].values - isochrone[chi2_columns].values
+        Diff = candidates_df[chi2_columns].values - isochrone[chi2_columns].values[:,newaxis]
         condition = np.where(Diff > 0, 1, 0)
         Errs = np.choose(condition,choice)
         chi2_indiv = np.sum(np.square(np.divide(Diff,Errs)),axis=2)
@@ -251,11 +249,11 @@ def read_iso(iso_path, iso_header, output_format, Take_exp = None):
                 retval.append(sin_age_iso)
             iso_df = pd.concat(retval)
             iso_df[iso_header].astype(float)
-            if Take_exp != None:
-                iso_df[Take_exp] = 10**(iso_df[Take_exp].values)
         elif output_format == 'iso_D':
         #new format
-            iso_df = pd.read_csv(iso_path)
+            iso_df = pd.read_csv(iso_path,names=iso_header,skiprows=1)
+        if Take_exp != None:
+            iso_df[Take_exp] = 10**(iso_df[Take_exp].values)
     return mc_num, iso_df
 
 
