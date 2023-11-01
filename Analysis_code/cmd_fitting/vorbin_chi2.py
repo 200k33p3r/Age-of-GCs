@@ -8,7 +8,7 @@ from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
-from path_config import data_path, resample_path,repo_path
+from path_config import data_path, resample_path,repo_path,obs_type
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
 #from skopt.space.space import Real
@@ -413,7 +413,7 @@ class chi2(utiles):
 		elif GC_name == 'NGC3201':
 			self.feh=148
 		#define all the path for read and write
-		obs_data_path = data_path + "{}/simulateCMD/{}_fitstars_DRCR.dat".format(GC_name,GC_name)
+		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		vorbin_path = data_path + "{}/vorbin".format(GC_name)
 		self.vorbin_path = vorbin_path
 		chi2_path = data_path + "{}/outchi2".format(GC_name)

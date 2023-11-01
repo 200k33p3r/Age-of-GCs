@@ -37,7 +37,7 @@ class sCMD:
 
 	def __init__(self, GC_name, mc_num, age, method):
 		#define global variables
-		self.outcmd_path = "/work2/08819/mying/{}/simulateCMD/outcmd".format(GC_name)
+		self.outcmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
 		self.GC_name = str(GC_name)
 		self.method = str(method)
 		if GC_name == 'M55':
