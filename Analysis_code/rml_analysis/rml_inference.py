@@ -83,7 +83,7 @@ def fit_cmd(iso_path, star_path, wrt_path, iso_format='DSEP_iso',metric_headers=
     check_file(iso_path)
     check_file(star_path)
     #the default format is the old isochrone format
-    if iso_format == 'iso_D':
+    if iso_format == 'DSEP_iso':
         iso_header=['EEP','M/Ms','F606W','F606W-F814W']
         Take_exp=None
     #read candidates

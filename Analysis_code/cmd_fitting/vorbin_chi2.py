@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
+from path_config import data_path, resample_path,repo_path
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
 #from skopt.space.space import Real
@@ -412,12 +413,12 @@ class chi2(utiles):
 		elif GC_name == 'NGC3201':
 			self.feh=148
 		#define all the path for read and write
-		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_DRCR.dat".format(GC_name,GC_name)
-		vorbin_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/vorbin".format(GC_name)
+		obs_data_path = data_path + "{}/simulateCMD/{}_fitstars_DRCR.dat".format(GC_name,GC_name)
+		vorbin_path = data_path + "{}/vorbin".format(GC_name)
 		self.vorbin_path = vorbin_path
-		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)
-		cmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
-		iso_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outiso".format(GC_name)
+		chi2_path = data_path + "{}/outchi2".format(GC_name)
+		cmd_path = data_path + "{}/simulateCMD/outcmd".format(GC_name)
+		iso_path = data_path + "{}/outiso".format(GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		self.check_directories(vorbin_path)
@@ -497,10 +498,10 @@ class KS_2d(utiles):
 		elif GC_name == 'NGC3201':
 			self.feh = 148
 		#define all the path for read and write
-		obs_data_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
-		chi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2".format(GC_name)
-		cmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
-		iso_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outiso".format(GC_name)
+		obs_data_path = data_path + "{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
+		chi2_path = data_path + "{}/outchi2".format(GC_name)
+		cmd_path = data_path + "{}/simulateCMD/outcmd".format(GC_name)
+		iso_path = data_path + "{}/outiso".format(GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		self.check_directories(chi2_path)
@@ -566,14 +567,13 @@ class resample(utiles):
 		if GC_name == 'M55':
 			# repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
 			# resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
-			repo_path = '/home/mying/Desktop/Repositories/Age-of-GCs'
-			resample_path = "/home/mying/Desktop/{}_data/resample".format(GC_name)
+			resample_data_path = resample_path + "{}_data/resample".format(GC_name)
 		data_path = "{}/{}_data".format(repo_path, GC_name)
 		photometry_folder = "{}/Photometry".format(repo_path)
 		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
-		vorbin_path = "{}/vorbin".format(resample_path )
-		chi2_path = "{}/outchi2".format(resample_path)
-		cmd_path = "{}/cmd".format(resample_path )
+		vorbin_path = "{}/vorbin".format(resample_data_path )
+		chi2_path = "{}/outchi2".format(resample_data_path)
+		cmd_path = "{}/cmd".format(resample_data_path )
 		obs_data_path = "{}/{}_fitstars_with_bins.dat".format(data_path,GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
@@ -929,7 +929,6 @@ class resample_fidanka(utiles):
 		if GC_name == 'M55':
 			# repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
 			# resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
-			repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
 			resample_path = "/home/mying/Desktop/ipynb/{}_data/resample".format(GC_name)
 		data_path = "{}/{}_data".format(repo_path, GC_name)
 		binary_path = "{}/{}_binary_chart.csv".format(data_path, GC_name)
