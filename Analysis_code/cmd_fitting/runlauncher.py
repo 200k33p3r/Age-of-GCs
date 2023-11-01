@@ -30,5 +30,6 @@ import runsCMD
 if int(order_num) % 2 == 0:
     for age in ages[:20]:
         runsCMD.sCMD(GC_name,mc_num,int(age),method)
+else:
     for age in ages[20:]:
         runsCMD.sCMD(GC_name,mc_num,int(age),method)
