@@ -51,6 +51,15 @@ class sCMD:
 			self.feh=148
 			self.binary=0.061
 			self.pdmf = -1.22
+		elif GC_name == 'M15':
+			self.feh=227
+			self.binary=0.013
+			self.pdmf=-1.00
+		elif GC_name == 'M30':
+			#pdmf from Ebrahimi et al (2020)
+			self.feh=210
+			self.binary=0.012
+			self.pdmf=-0.80
 		self.mc_num = str(mc_num)
 		if float(age) < 10000:
 			self.age = '0'+str(age)
