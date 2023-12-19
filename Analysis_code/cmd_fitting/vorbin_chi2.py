@@ -19,6 +19,32 @@ from path_config import data_path, resample_path,repo_path,obs_type
 #os.environ['MKL_NUM_THREADS'] = '1'
 
 class utiles:
+	def define_range(self,GC_name):
+		if GC_name == 'M92':
+			self.feh = 230
+		elif GC_name == 'M55':
+			# dm_max = 14.40
+			# dm_min = 13.40
+			# red_max = 0.20
+			# red_min = 0.00
+			dm_max = 14.1
+			dm_min = 13.8
+			red_max = 0.15
+			red_min = 0.08
+			self.feh = 190
+		elif GC_name == 'NGC3201':
+			dm_max = 14.3
+			dm_min = 14.0
+			red_max = 0.30
+			red_min = 0.15
+			self.feh=148
+		elif GC_name == 'M15':
+			dm_max = 15.8
+			dm_min = 15.3
+			red_max = 0.15
+			red_min = 0.08
+			self.feh=227
+		return dm_max, dm_min, red_max, red_min
 	#Divide-and-Conquer method to find the 2d ecdf
 	def _rank2(self, points, mask=None):
 		N = points.shape[0]
@@ -388,30 +414,11 @@ class chi2(utiles):
 
 	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30):
 		#define distance modulus and reddening ranges
-		if GC_name == 'M55':
-			# dm_max = 14.40
-			# dm_min = 13.40
-			# red_max = 0.20
-			# red_min = 0.00
-			dm_max = 14.1
-			dm_min = 13.8
-			red_max = 0.15
-			red_min = 0.08
-		elif GC_name == 'NGC3201':
-			dm_max = 14.3
-			dm_min = 14.0
-			red_max = 0.30
-			red_min = 0.15
+		dm_max, dm_min, red_max, red_min = self.define_range(GC_name)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
 		self.Tb_size = Tb_size
-		if GC_name == 'M92':
-			self.feh = 230
-		elif GC_name == 'M55':
-			self.feh = 190
-		elif GC_name == 'NGC3201':
-			self.feh=148
 		#define all the path for read and write
 		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		vorbin_path = data_path + "{}/vorbin".format(GC_name)
@@ -478,25 +485,10 @@ class KS_2d(utiles):
 	#use 2d KS test to calculate the Metric for the input isochrones
 	def __init__(self, GC_name, mc_num, iso_age):
 		#define distance modulus and reddening ranges
-		if GC_name == 'M55':
-			dm_max = 14.1
-			dm_min = 13.8
-			red_max = 0.15
-			red_min = 0.08
-		elif GC_name == 'NGC3201':
-			dm_max = 14.3
-			dm_min = 14.0
-			red_max = 0.30
-			red_min = 0.15
+		dm_max, dm_min, red_max, red_min = self.define_range(GC_name)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
-		if GC_name == 'M92':
-			self.feh = 230
-		elif GC_name == 'M55':
-			self.feh = 190
-		elif GC_name == 'NGC3201':
-			self.feh = 148
 		#define all the path for read and write
 		obs_data_path = data_path + "{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
 		chi2_path = data_path + "{}/outchi2".format(GC_name)

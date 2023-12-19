@@ -54,7 +54,7 @@ class sCMD:
 		elif GC_name == 'M15':
 			self.feh=227
 			self.binary=0.013
-			self.pdmf=-1.00
+			self.pdmf=-0.99
 		elif GC_name == 'M30':
 			#pdmf from Ebrahimi et al (2020)
 			self.feh=210
