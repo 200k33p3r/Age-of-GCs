@@ -65,12 +65,15 @@ class sCMD:
 			self.age = '0'+str(age)
 		else:
 			self.age = str(age)
-		#time it
-		start_time = time.time()
-		#generate CMD
-		self.CMD_gen()
-		self.CMD_check()
-		self.run_vorbin()
-		self.rmCMD()
-		print("Done MC{} Age{}".format(self.mc_num, self.age))
-		print("--- %s seconds ---" % (time.time() - start_time))
+		self.outchi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2/chi2_a{}_mc{}".format(GC_name,self.age,self.mc_num)
+		#if the chi2 file already exist, skip
+		if os.path.exists(self.outchi2_path) == False:
+			#time it
+			start_time = time.time()
+			#generate CMD
+			self.CMD_gen()
+			self.CMD_check()
+			self.run_vorbin()
+			self.rmCMD()
+			print("Done MC{} Age{}".format(self.mc_num, self.age))
+			print("--- %s seconds ---" % (time.time() - start_time))
