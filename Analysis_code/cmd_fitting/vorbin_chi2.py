@@ -8,6 +8,7 @@ from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
+from global_var import define_range
 from path_config import data_path, resample_path,repo_path,obs_type
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
@@ -19,32 +20,6 @@ from path_config import data_path, resample_path,repo_path,obs_type
 #os.environ['MKL_NUM_THREADS'] = '1'
 
 class utiles:
-	def define_range(self,GC_name):
-		if GC_name == 'M92':
-			self.feh = 230
-		elif GC_name == 'M55':
-			# dm_max = 14.40
-			# dm_min = 13.40
-			# red_max = 0.20
-			# red_min = 0.00
-			dm_max = 14.1
-			dm_min = 13.8
-			red_max = 0.15
-			red_min = 0.08
-			self.feh = 190
-		elif GC_name == 'NGC3201':
-			dm_max = 14.3
-			dm_min = 14.0
-			red_max = 0.30
-			red_min = 0.15
-			self.feh=148
-		elif GC_name == 'M15':
-			dm_max = 15.8
-			dm_min = 15.3
-			red_max = 0.15
-			red_min = 0.08
-			self.feh=227
-		return dm_max, dm_min, red_max, red_min
 	#Divide-and-Conquer method to find the 2d ecdf
 	def _rank2(self, points, mask=None):
 		N = points.shape[0]
@@ -414,7 +389,7 @@ class chi2(utiles):
 
 	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30):
 		#define distance modulus and reddening ranges
-		dm_max, dm_min, red_max, red_min = self.define_range(GC_name)
+		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
@@ -485,7 +460,7 @@ class KS_2d(utiles):
 	#use 2d KS test to calculate the Metric for the input isochrones
 	def __init__(self, GC_name, mc_num, iso_age):
 		#define distance modulus and reddening ranges
-		dm_max, dm_min, red_max, red_min = self.define_range(GC_name)
+		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
@@ -986,26 +961,14 @@ class chi2_iso(utiles):
 
 	def __init__(self, GC_name, mc_num, age, obs_i, resample_i, UniSN=False, write_vorbin=False, Tb_size=30):
 		#define distance modulus and reddening ranges
-		if GC_name == 'M55':
-			# dm_max = 14.40
-			# dm_min = 13.40
-			# red_max = 0.20
-			# red_min = 0.00
-			dm_max = 14.1
-			dm_min = 13.8
-			red_max = 0.15
-			red_min = 0.08
-		if GC_name == 'M92':
-			self.feh = 230
-		elif GC_name == 'M55':
-			self.feh = 190
+		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		self.Tb_size = Tb_size
 		#define all the path for read and write
-		obs_data_path = "/home/mying/Desktop/{}_resample/outcmd/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
-		vorbin_path = "/home/mying/Desktop/{}_resample/vorbin/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
-		chi2_path = "/home/mying/Desktop/{}_resample/outchi2/mc{}.a{}".format(GC_name, mc_num,age)
-		cmd_path = "/home/mying/Desktop/{}_resample/outcmd/mc{}.a{}_{}".format(GC_name, mc_num,age, str(resample_i))
-		iso_path = "/home/mying/Desktop/{}_resample/outiso/".format(GC_name)
+		obs_data_path = "{}{}/outcmd".format(resample_path, self.GC_name) + "/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
+		vorbin_path = "{}{}/vorbin".format(resample_path, self.GC_name) + "/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
+		chi2_path = "{}{}/outchi2".format(resample_path, self.GC_name) + "/mc{}.a{}".format(GC_name, mc_num,age)
+		cmd_path = "{}{}/outcmd".format(resample_path, self.GC_name) + "/mc{}.a{}_{}".format(GC_name, mc_num,age, str(resample_i))
+		iso_path = "{}{}/outiso".format(resample_path, self.GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		#self.check_directories(vorbin_path)

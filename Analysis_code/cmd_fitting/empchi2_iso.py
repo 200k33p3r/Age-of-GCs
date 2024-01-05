@@ -2,12 +2,14 @@ import vorbin_chi2
 import subprocess
 import os
 import time
+from global_var import sCMD_vars
+from path_config import resample_path
 
 class resample_iso:
 	def CMD_gen(self,resample_num):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), '-1.02', str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
-		source = '/home/mying/Desktop/M55_resample/outcmd/' + "mc{}.a{}".format(self.mc_num,self.age)
-		dest = '/home/mying/Desktop/M55_resample/outcmd/' + "mc{}.a{}_{}".format(self.mc_num,self.age, str(resample_num))
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
+		source = self.outcmd_path + "/mc{}.a{}".format(self.mc_num,self.age)
+		dest = self.outcmd_path + "/mc{}.a{}_{}".format(self.mc_num,self.age, str(resample_num))
 		os.rename(source,dest)
 
 	def CMD_check(self,resample_num):
@@ -35,14 +37,10 @@ class resample_iso:
 
 	def __init__(self, GC_name, mc_num, age, resample_num=100):
 		#define global variables
-		self.outcmd_path ='/home/mying/Desktop/M55_resample/outcmd'
+		self.outcmd_path ="{}{}/outcmd".format(resample_path, self.GC_name)
 		self.GC_name = str(GC_name)
-		if GC_name == 'M55':
-			self.feh=190
-			#binary from Milone 2012 A&A 540, A16 (2012)
-			#self.binary=0.04
-			#binaries are already included in the phonetric error
-			self.binary=0.00
+		#define globar variables used to generate sCMD
+		self.feh, self.binary, self.pdmf = sCMD_vars(GC_name)
 		self.mc_num = str(mc_num)
 		if float(age) < 10000:
 			self.age = '0'+str(age)

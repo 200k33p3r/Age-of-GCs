@@ -2,6 +2,8 @@ import vorbin_chi2
 import subprocess
 import os
 import time
+from global_var import sCMD_vars
+from path_config import data_path
 
 class sCMD:
 	def CMD_gen(self):
@@ -37,35 +39,17 @@ class sCMD:
 
 	def __init__(self, GC_name, mc_num, age, method):
 		#define global variables
-		self.outcmd_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/simulateCMD/outcmd".format(GC_name)
+		self.outcmd_path = "{}{}/simulateCMD/outcmd".format(data_path, GC_name)
 		self.GC_name = str(GC_name)
 		self.method = str(method)
-		if GC_name == 'M55':
-			self.feh=190
-			#binary from Milone 2012 A&A 540, A16 (2012)
-			self.binary=0.04
-			#binaries are already included in the phonetric error
-			#self.binary=0.00
-			self.pdmf = -0.83
-		elif GC_name == 'NGC3201':
-			self.feh=148
-			self.binary=0.061
-			self.pdmf = -1.22
-		elif GC_name == 'M15':
-			self.feh=227
-			self.binary=0.013
-			self.pdmf=-0.99
-		elif GC_name == 'M30':
-			#pdmf from Ebrahimi et al (2020)
-			self.feh=210
-			self.binary=0.012
-			self.pdmf=-0.80
+		#define globar variables used to generate sCMD
+		self.feh, self.binary, self.pdmf = sCMD_vars(GC_name)
 		self.mc_num = str(mc_num)
 		if float(age) < 10000:
 			self.age = '0'+str(age)
 		else:
 			self.age = str(age)
-		self.outchi2_path = "/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/{}/outchi2/chi2_a{}_mc{}".format(GC_name,self.age,self.mc_num)
+		self.outchi2_path = "{}{}/outchi2/chi2_a{}_mc{}".format(data_path,GC_name,self.age,self.mc_num)
 		#if the chi2 file already exist, skip
 		if os.path.exists(self.outchi2_path) == False:
 			#time it
