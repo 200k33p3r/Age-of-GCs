@@ -964,11 +964,11 @@ class chi2_iso(utiles):
 		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		self.Tb_size = Tb_size
 		#define all the path for read and write
-		obs_data_path = "{}{}/outcmd".format(resample_path, self.GC_name) + "/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
-		vorbin_path = "{}{}/vorbin".format(resample_path, self.GC_name) + "/mc{}.a{}_{}".format(GC_name, mc_num,age, str(obs_i))
-		chi2_path = "{}{}/outchi2".format(resample_path, self.GC_name) + "/mc{}.a{}".format(GC_name, mc_num,age)
-		cmd_path = "{}{}/outcmd".format(resample_path, self.GC_name) + "/mc{}.a{}_{}".format(GC_name, mc_num,age, str(resample_i))
-		iso_path = "{}{}/outiso".format(resample_path, self.GC_name)
+		obs_data_path = "{}{}/outcmd".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(obs_i))
+		vorbin_path = "{}{}/vorbin".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(obs_i))
+		chi2_path = "{}{}/outchi2".format(resample_path, GC_name) + "/mc{}.a{}".format(mc_num,age)
+		cmd_path = "{}{}/outcmd".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(resample_i))
+		iso_path = "{}{}/outiso".format(resample_path, GC_name)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		#self.check_directories(vorbin_path)

@@ -38,9 +38,9 @@ class sCMD:
 		os.remove(path)
 
 	def __init__(self, GC_name, mc_num, age, method):
+		self.GC_name = str(GC_name)
 		#define global variables
 		self.outcmd_path = "{}{}/simulateCMD/outcmd".format(data_path, GC_name)
-		self.GC_name = str(GC_name)
 		self.method = str(method)
 		#define globar variables used to generate sCMD
 		self.feh, self.binary, self.pdmf = sCMD_vars(GC_name)

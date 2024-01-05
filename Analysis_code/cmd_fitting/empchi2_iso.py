@@ -36,9 +36,9 @@ class resample_iso:
 		os.remove(path)
 
 	def __init__(self, GC_name, mc_num, age, resample_num=100):
+		self.GC_name = str(GC_name)
 		#define global variables
 		self.outcmd_path ="{}{}/outcmd".format(resample_path, self.GC_name)
-		self.GC_name = str(GC_name)
 		#define globar variables used to generate sCMD
 		self.feh, self.binary, self.pdmf = sCMD_vars(GC_name)
 		self.mc_num = str(mc_num)
