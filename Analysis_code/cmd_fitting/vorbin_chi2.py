@@ -952,7 +952,7 @@ class chi2_iso(utiles):
 
 	def read_input(self,path):
 		names = ['vi','v']
-		obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names)
+		obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names).iloc[:10000]
 		for i in range(len(names)):
 			for j in range(len(obs_data.columns)):
 				if names[i] == obs_data.columns[j]:
@@ -965,7 +965,7 @@ class chi2_iso(utiles):
 		self.Tb_size = Tb_size
 		#define all the path for read and write
 		obs_data_path = "{}{}/outcmd".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(obs_i))
-		vorbin_path = "{}{}/vorbin".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(obs_i))
+		vorbin_path = "{}{}/vorbin".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(resample_i))
 		chi2_path = "{}{}/outchi2".format(resample_path, GC_name) + "/mc{}.a{}".format(mc_num,age)
 		cmd_path = "{}{}/outcmd".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(resample_i))
 		iso_path = "{}{}/outiso".format(resample_path, GC_name)
@@ -1015,7 +1015,6 @@ class chi2_iso(utiles):
 		#calculate chi2
 		dm,red = 0.0,0.0
 		chi2_fit = self.dm_red_search([dm,red])
-
 		#write out the result
 		df_retval = pd.DataFrame({'chi2': [chi2_fit], 'obs_i': [obs_i], 'fit_i':[resample_i]})
 		df_retval.to_csv(chi2_path,index=False,mode='a',header=not os.path.exists(chi2_path))
