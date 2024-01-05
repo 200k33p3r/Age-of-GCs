@@ -490,7 +490,7 @@ class KS_2d(utiles):
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
 		#define all the path for read and write
-		obs_data_path = data_path + "{}/simulateCMD/{}_fitstars_ZPCR.dat".format(GC_name,GC_name)
+		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		chi2_path = data_path + "{}/outchi2".format(GC_name)
 		cmd_path = data_path + "{}/simulateCMD/outcmd".format(GC_name)
 		iso_path = data_path + "{}/outiso".format(GC_name)
