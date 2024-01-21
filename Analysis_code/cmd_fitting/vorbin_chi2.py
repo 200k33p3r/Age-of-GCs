@@ -8,7 +8,7 @@ from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
-from global_var import define_range, define_N_true_obs
+from global_var import define_range, define_N_true_obs, define_N_phot
 from path_config import data_path, resample_path,repo_path,obs_type
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
@@ -482,7 +482,7 @@ class KS_2d(utiles):
 
 class resample(utiles):
 
-	def read_input(self,obs_path,phot_path):
+	def read_input(self,obs_path,phot_path,N_phot):
 		#read M92 observed data
 		self.obs_data = pd.read_csv(obs_path)
 		#read AS test error
@@ -490,11 +490,12 @@ class resample(utiles):
 		self.dps_Verr = []
 		self.completeness_V = []
 		self.completeness_I = []
-		for i in range(80):
-			self.dps_Ierr.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
-			self.dps_Verr.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
-			self.completeness_V.append(pd.read_csv("{}/Verr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
-			self.completeness_I.append(pd.read_csv("{}/Ierr{:02d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+		
+		for i in range(N_phot):
+			self.dps_Ierr.append(pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
+			self.dps_Verr.append(pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			self.completeness_V.append(pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+			self.completeness_I.append(pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 
 	def resample(self,k,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
 		sample_list = np.random.randint(0,len(self.obs_data),size=self.sample_pt)
@@ -524,24 +525,20 @@ class resample(utiles):
 
 	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
 		#define boundaris
-		if GC_name == 'M55':
-			obs_vi_max = 0.792
-			obs_vi_min = 0.462
-			obs_v_max = 19.28
-			obs_v_min = 15.296
+		obs_vi_max = max(self.obs_data['vi'].values)
+		obs_vi_min = min(self.obs_data['vi'].values)
+		obs_v_max = max(self.obs_data['v'].values)
+		obs_v_min = min(self.obs_data['v'].values)
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#define all the path for read and write
-		if GC_name == 'M55':
-			# repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
-			# resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
-			resample_data_path = resample_path + "{}_data/resample".format(GC_name)
+		resample_data_path = resample_path + "{}_data/".format(GC_name)
 		data_path = "{}/{}_data".format(repo_path, GC_name)
 		photometry_folder = "{}/Photometry".format(repo_path)
 		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
 		vorbin_path = "{}/vorbin".format(resample_data_path )
 		chi2_path = "{}/outchi2".format(resample_data_path)
 		cmd_path = "{}/cmd".format(resample_data_path )
-		obs_data_path = "{}/{}_fitstars_with_bins.dat".format(data_path,GC_name)
+		obs_data_path = "{}/{}_{}".format(data_path,GC_name,obs_type)
 		#check those directories exist
 		self.check_file(obs_data_path)
 		self.check_file(photometry_path)
@@ -555,7 +552,8 @@ class resample(utiles):
 		self.MSTO_cut = MSTO_cut
 		self.GB_cut = GB_cut
 		#read obs data
-		self.read_input(obs_data_path,photometry_path)
+		N_phot = define_N_phot(GC_name)
+		self.read_input(obs_data_path,photometry_path,N_phot)
 		#run resample
 		chi2 = []
 		for k in range(start, end):

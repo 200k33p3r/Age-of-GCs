@@ -52,3 +52,14 @@ def define_N_true_obs(GC_name):
     if GC_name == 'M15':
         N_true_obs = 91944
     return N_true_obs
+
+def define_N_phot(GC_name):
+    if GC_name == 'M92':
+        N_phot = 80
+    elif GC_name == 'NGC3201':
+        N_phot = 120
+    elif GC_name == 'M55':
+        N_phot = 120
+    elif GC_name == 'M15':
+        N_phot = 120  
+    return N_phot
