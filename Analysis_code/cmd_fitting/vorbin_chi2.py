@@ -8,7 +8,7 @@ from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
-from global_var import define_range
+from global_var import define_range, define_N_true_obs
 from path_config import data_path, resample_path,repo_path,obs_type
 #from bayes_opt import BayesianOptimization
 #from skopt import gp_minimize
@@ -950,9 +950,9 @@ class resample_fidanka(utiles):
 
 class chi2_iso(utiles):
 
-	def read_input(self,path):
+	def read_input(self,path, N_true_obs):
 		names = ['vi','v']
-		obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names).iloc[:10000]
+		obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names).iloc[:N_true_obs]
 		for i in range(len(names)):
 			for j in range(len(obs_data.columns)):
 				if names[i] == obs_data.columns[j]:
@@ -975,7 +975,8 @@ class chi2_iso(utiles):
 		#self.check_directories(chi2_path)
 		#self.check_directories(cmd_path)
 		self.check_directories(iso_path)
-		self.read_input(obs_data_path)
+		N_true_obs = define_N_true_obs(GC_name)
+		self.read_input(obs_data_path, N_true_obs)
 		#read cmd files
 		cmd = pd.read_csv(cmd_path,sep='\s+',names=['vi','v'],skiprows=3)
 		#go through the search process
@@ -1019,4 +1020,4 @@ class chi2_iso(utiles):
 		df_retval = pd.DataFrame({'chi2': [chi2_fit], 'obs_i': [obs_i], 'fit_i':[resample_i]})
 		df_retval.to_csv(chi2_path,index=False,mode='a',header=not os.path.exists(chi2_path))
 
-		print("done obs:{}, reasample:{}".format(obs_i, resample_i))
+		print("done obs:{}, resample:{}".format(obs_i, resample_i))

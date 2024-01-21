@@ -35,7 +35,8 @@ class sCMD:
 		#remove searched sCMD file
 		file = "mc{}.a{}".format(self.mc_num, self.age)
 		path = os.path.join(self.outcmd_path, file)
-		os.remove(path)
+		if os.path.exists(path) == True:
+			os.remove(path)
 
 	def __init__(self, GC_name, mc_num, age, method):
 		self.GC_name = str(GC_name)
@@ -61,3 +62,5 @@ class sCMD:
 			self.rmCMD()
 			print("Done MC{} Age{}".format(self.mc_num, self.age))
 			print("--- %s seconds ---" % (time.time() - start_time))
+		else:
+			self.rmCMD()

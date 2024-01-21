@@ -47,3 +47,8 @@ def define_range(GC_name):
         red_min = 0.08
         feh=227
     return feh, dm_max, dm_min, red_max, red_min
+
+def define_N_true_obs(GC_name):
+    if GC_name == 'M15':
+        N_true_obs = 91944
+    return N_true_obs
