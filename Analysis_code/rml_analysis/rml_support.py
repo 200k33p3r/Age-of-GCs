@@ -123,7 +123,7 @@ def calculate_chi2(candidates_df, iso_df, chi2_columns,target_ages):
     choice = np.array([candidate_neg_err,candidate_pos_err])
     min_chi2_list = np.zeros((len(target_ages), Nstars))
     for i, isochrone in enumerate(isochrones):
-        Diff = candidates_df[chi2_columns].values - isochrone[chi2_columns].values[:,newaxis]
+        Diff = candidates_df[chi2_columns].values.astype(float) - isochrone[chi2_columns].values[:,newaxis].astype(float)
         condition = np.where(Diff > 0, 1, 0)
         Errs = np.choose(condition,choice)
         chi2_indiv = np.sum(np.square(np.divide(Diff,Errs)),axis=2)
