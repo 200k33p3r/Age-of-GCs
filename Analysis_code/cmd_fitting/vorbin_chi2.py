@@ -523,7 +523,7 @@ class resample(utiles):
 		return df_resample
 
 
-	def __init__(self, GC_name, start, end, MSTO_cut, GB_cut, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
+	def __init__(self, GC_name, start, end, UniSN=True, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
 		#define boundaris
 		obs_vi_max = max(self.obs_data['vi'].values)
 		obs_vi_min = min(self.obs_data['vi'].values)
@@ -548,9 +548,6 @@ class resample(utiles):
 		#assign other global variables
 		self.Tb_size = Tb_size
 		self.sample_pt = sample_pt
-		#find both cuts from observational data
-		self.MSTO_cut = MSTO_cut
-		self.GB_cut = GB_cut
 		#read obs data
 		N_phot = define_N_phot(GC_name)
 		self.read_input(obs_data_path,photometry_path,N_phot)
@@ -560,8 +557,12 @@ class resample(utiles):
 			print("Starting {}th resample".format(k))
 			df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
 			total_pt = len(df)
-			V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df)
-			x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			if UniSN == False:
+				print('Need to manually find cuts. Not supported for now.')
+				#V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df, read_track=self.find_two_eeps(iso_path))
+				#x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+			else:
+				x_gen, y_gen = self.generate_vorbin([df['v'].values,df['vi'].values*width_coeff],UniSN=True)
 			#reduce memory usage for matrix operations
 			XBar = np.float32(x_gen)
 			YBar = np.float32(y_gen)
