@@ -537,7 +537,7 @@ class resample(utiles):
 		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
 		vorbin_path = "{}/vorbin".format(resample_data_path )
 		chi2_path = "{}/outchi2".format(resample_data_path)
-		cmd_path = "{}/cmd".format(resample_data_path )
+		cmd_path = "{}/outcmd".format(resample_data_path )
 		obs_data_path = "{}/{}_{}".format(data_path,GC_name,obs_type)
 		#check those directories exist
 		self.check_file(obs_data_path)
