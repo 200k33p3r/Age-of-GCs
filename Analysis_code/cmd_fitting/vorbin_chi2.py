@@ -524,14 +524,8 @@ class resample(utiles):
 
 
 	def __init__(self, GC_name, start, end, UniSN=True, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
-		#define boundaris
-		obs_vi_max = max(self.obs_data['vi'].values)
-		obs_vi_min = min(self.obs_data['vi'].values)
-		obs_v_max = max(self.obs_data['v'].values)
-		obs_v_min = min(self.obs_data['v'].values)
-		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#define all the path for read and write
-		resample_data_path = resample_path + "{}_data/".format(GC_name)
+		resample_data_path = resample_path + "{}".format(GC_name)
 		data_path = "{}/{}_data".format(repo_path, GC_name)
 		photometry_folder = "{}/Photometry".format(repo_path)
 		photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
@@ -551,6 +545,12 @@ class resample(utiles):
 		#read obs data
 		N_phot = define_N_phot(GC_name)
 		self.read_input(obs_data_path,photometry_path,N_phot)
+		#define boundaris
+		obs_vi_max = max(self.obs_data['vi'].values)
+		obs_vi_min = min(self.obs_data['vi'].values)
+		obs_v_max = max(self.obs_data['v'].values)
+		obs_v_min = min(self.obs_data['v'].values)
+		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
 		#run resample
 		chi2 = []
 		for k in range(start, end):
@@ -569,7 +569,7 @@ class resample(utiles):
 			v_32 = np.float32(df['v'].values)
 			vi_32 = np.float32(df['vi'].values*width_coeff)
 			#find standard bin count by search through all the theoretical data points
-			bin_count_std = self.search_vorbin(XBar, YBar*width_coeff, total_pt, vi_32, v_32)
+			bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
 			if write_vorbin == True:
 				#no age for resample
 				age = 0
@@ -578,9 +578,9 @@ class resample(utiles):
 			obs_size = len(self.obs_data)
 			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
 			v_32 = np.float32(self.obs_data['v'].values)
-			bin_count = self.search_vorbin(XBar, YBar*width_coeff, obs_size, vi_32, v_32)
+			bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
 			#calculate chi2
-			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])  
+			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))/(obs_size - 22)])  
 		self.writeout_resample(chi2_path,start,end,chi2)
 
 #this is similar to resample class but utilizing the fiducial isochrone generated from fidanka
