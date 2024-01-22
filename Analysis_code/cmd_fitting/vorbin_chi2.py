@@ -523,7 +523,7 @@ class resample(utiles):
 		return df_resample
 
 
-	def __init__(self, GC_name, start, end, UniSN=True, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
+	def __init__(self, GC_name, start, end, reverse = False, UniSN=True, write_vorbin=False, Tb_size=30,write_cmd=False, sample_pt=4000000):
 		#define all the path for read and write
 		resample_data_path = resample_path + "{}".format(GC_name)
 		data_path = "{}/{}_data".format(repo_path, GC_name)
@@ -551,36 +551,71 @@ class resample(utiles):
 		obs_v_max = max(self.obs_data['v'].values)
 		obs_v_min = min(self.obs_data['v'].values)
 		width_coeff = (obs_v_max - obs_v_min)/(obs_vi_max - obs_vi_min)
-		#run resample
-		chi2 = []
-		for k in range(start, end):
-			print("Starting {}th resample".format(k))
-			df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
-			total_pt = len(df)
-			if UniSN == False:
-				print('Need to manually find cuts. Not supported for now.')
-				#V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df, read_track=self.find_two_eeps(iso_path))
-				#x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
-			else:
-				x_gen, y_gen = self.generate_vorbin([df['v'].values,df['vi'].values*width_coeff],UniSN=True)
-			#reduce memory usage for matrix operations
-			XBar = np.float32(x_gen)
-			YBar = np.float32(y_gen)
-			v_32 = np.float32(df['v'].values)
-			vi_32 = np.float32(df['vi'].values*width_coeff)
-			#find standard bin count by search through all the theoretical data points
-			bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
-			if write_vorbin == True:
-				#no age for resample
-				age = 0
-				self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
-			#fit observation data
-			obs_size = len(self.obs_data)
-			vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
-			v_32 = np.float32(self.obs_data['v'].values)
-			bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
-			#calculate chi2
-			chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))/(obs_size - 22)])  
+		#if reverse is true, we can just use the same vorbin for the entire analysis
+		if reverse == True:
+			#check if vorbin already existed
+			if os.path.isfile("{}/bin_mcobs.age0".format(vorbin_path)) == False:
+				#generate vorbin
+				x_gen, y_gen = self.generate_vorbin([self.obs_data['v'].values,self.obs_data['vi'].values*width_coeff],UniSN=True)
+				obs_pt = len(self.obs_data)
+				#reduce memory usage for matrix operations
+				XBar = np.float32(x_gen)
+				YBar = np.float32(y_gen)
+				v_32 = np.float32(self.obs_data['v'].values)
+				vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
+				#find standard bin count by search through all the theoretical data points
+				bin_count = self.search_vorbin(XBar, YBar, obs_pt, vi_32, v_32)
+				self.writevorbin(x_gen, y_gen, bin_count, 'obs', 0, vorbin_path)
+			#run resample
+			chi2 = []
+			for k in range(start, end):
+				print("Starting {}th resample".format(k))
+				df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
+				total_pt = len(df)
+				vorbin = pd.read_csv("{}/bin_mcobs.age0".format(vorbin_path), skiprows=1,names=['x_gen', 'y_gen','bin_count'])
+				#reduce memory usage for matrix operations
+				XBar = np.float32(vorbin['x_gen'].values)
+				YBar = np.float32(vorbin['y_gen'].values)
+				bin_count = vorbin['bin_count'].values
+				#fit observation data
+				obs_size = len(bin_count)
+				vi_32 = np.float32(df['vi'].values*width_coeff)
+				v_32 = np.float32(df['v'].values)
+				total_pt = len(df)
+				bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
+				#calculate chi2
+				chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))/(obs_size - 22)])  
+		else:
+			#run resample
+			chi2 = []
+			for k in range(start, end):
+				print("Starting {}th resample".format(k))
+				df = self.resample(k,cmd_path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min)
+				total_pt = len(df)
+				if UniSN == False:
+					print('Need to manually find cuts. Not supported for now.')
+					#V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB = self.divide_data(df, read_track=self.find_two_eeps(iso_path))
+					#x_gen, y_gen = self.generate_vorbin(V_MS, VI_MS, V_MSTO, VI_MSTO, V_GB, VI_GB)
+				else:
+					x_gen, y_gen = self.generate_vorbin([df['v'].values,df['vi'].values*width_coeff],UniSN=True)
+				#reduce memory usage for matrix operations
+				XBar = np.float32(x_gen)
+				YBar = np.float32(y_gen)
+				v_32 = np.float32(df['v'].values)
+				vi_32 = np.float32(df['vi'].values*width_coeff)
+				#find standard bin count by search through all the theoretical data points
+				bin_count_std = self.search_vorbin(XBar, YBar, total_pt, vi_32, v_32)
+				if write_vorbin == True:
+					#no age for resample
+					age = 0
+					self.writevorbin(x_gen, y_gen, bin_count_std, k, age, vorbin_path)
+				#fit observation data
+				obs_size = len(self.obs_data)
+				vi_32 = np.float32(self.obs_data['vi'].values*width_coeff)
+				v_32 = np.float32(self.obs_data['v'].values)
+				bin_count = self.search_vorbin(XBar, YBar, obs_size, vi_32, v_32)
+				#calculate chi2
+				chi2.append([k, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))/(obs_size - 22)])  
 		self.writeout_resample(chi2_path,start,end,chi2)
 
 #this is similar to resample class but utilizing the fiducial isochrone generated from fidanka
