@@ -578,7 +578,7 @@ class resample(utiles):
 				YBar = np.float32(vorbin['y_gen'].values)
 				bin_count = vorbin['bin_count'].values
 				#fit observation data
-				obs_size = len(bin_count)
+				obs_size = np.sum(bin_count)
 				vi_32 = np.float32(df['vi'].values*width_coeff)
 				v_32 = np.float32(df['v'].values)
 				total_pt = len(df)
