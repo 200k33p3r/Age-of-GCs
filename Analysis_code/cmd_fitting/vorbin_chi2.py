@@ -492,23 +492,36 @@ class resample(utiles):
 		self.completeness_I = []
 		
 		for i in range(N_phot):
-			self.dps_Ierr.append(pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr']))
-			self.dps_Verr.append(pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr']))
+			self.dps_Ierr.append(pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Ierr'])['Ierr'].values)
+			self.dps_Verr.append(pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=3,names=['Verr'])['Verr'].values)
 			self.completeness_V.append(pd.read_csv("{}/Verr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
 			self.completeness_I.append(pd.read_csv("{}/Ierr{:03d}s.dat".format(phot_path,i + 1),sep='\s+',skiprows=1,names=["#","Npts","Radius","Mag","Completeness"],nrows=1)['Completeness'].values[0])
+		self.dps_Ierr_len = np.array([len(self.dps_Ierr[i]) for i in range(len(self.dps_Ierr))])
+		self.dps_Verr_len = np.array([len(self.dps_Verr[i]) for i in range(len(self.dps_Verr))])
+		self.completeness_I = np.array(self.completeness_I)
+		self.completeness_V = np.array(self.completeness_V)
 
 	def resample(self,k,path,write_cmd,obs_vi_max,obs_vi_min,obs_v_max,obs_v_min):
 		sample_list = np.random.randint(0,len(self.obs_data),size=self.sample_pt)
 		Ierr = np.zeros(self.sample_pt)
 		Verr = np.zeros(self.sample_pt)
-		Mask = [True]*self.sample_pt
+		# Mask = [True]*self.sample_pt
 		#print(self.obs_data['Ibin'] - 1)
+		sample_Iidx = self.obs_data['Ibin'].values[sample_list]-1
+		sample_Vidx = self.obs_data['Vbin'].values[sample_list]-1
+		indv_Iidx = np.floor(np.multiply(np.random.rand(self.sample_pt), self.dps_Ierr_len[sample_Iidx])).astype(int)
+		indv_Vidx = np.floor(np.multiply(np.random.rand(self.sample_pt), self.dps_Verr_len[sample_Vidx])).astype(int)
+		#completeness test
+		Mask = np.multiply(self.completeness_I[sample_Iidx],self.completeness_V[sample_Vidx]) > np.random.rand(self.sample_pt)
 		for i in range(self.sample_pt):
-			Ierr[i] = self.dps_Ierr[self.obs_data['Ibin'].values[sample_list[i]]-1]['Ierr'].values[np.random.randint(0, high=len(self.dps_Ierr[self.obs_data['Ibin'].values[sample_list[i]]-1]))]
-			Verr[i] = self.dps_Verr[self.obs_data['Vbin'].values[sample_list[i]]-1]['Verr'].values[np.random.randint(0, high=len(self.dps_Verr[self.obs_data['Vbin'].values[sample_list[i]]-1]))]
-			#completeness test
-			if np.random.rand() > (self.completeness_V[self.obs_data['Vbin'].values[sample_list[i]]-1]*self.completeness_I[self.obs_data['Ibin'].values[sample_list[i]]-1]):
-				Mask[i] == False
+			Ierr[i] = self.dps_Ierr[sample_Iidx[i]][indv_Iidx[i]]
+			Verr[i] = self.dps_Verr[sample_Vidx[i]][indv_Vidx[i]]
+		# for i in range(self.sample_pt):
+		# 	Ierr[i] = self.dps_Ierr[self.obs_data['Ibin'].values[sample_list[i]]-1]['Ierr'].values[np.random.randint(0, high=len(self.dps_Ierr[self.obs_data['Ibin'].values[sample_list[i]]-1]))]
+		# 	Verr[i] = self.dps_Verr[self.obs_data['Vbin'].values[sample_list[i]]-1]['Verr'].values[np.random.randint(0, high=len(self.dps_Verr[self.obs_data['Vbin'].values[sample_list[i]]-1]))]
+		# 	#completeness test
+		# 	if np.random.rand() > (self.completeness_V[self.obs_data['Vbin'].values[sample_list[i]]-1]*self.completeness_I[self.obs_data['Ibin'].values[sample_list[i]]-1]):
+		# 		Mask[i] == False
 		Vvega = self.obs_data['v'].values[sample_list] + Verr
 		Ivega = self.obs_data['i'].values[sample_list] + Ierr
 		VIvega = Vvega - Ivega
