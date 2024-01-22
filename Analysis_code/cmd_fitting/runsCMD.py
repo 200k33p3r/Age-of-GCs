@@ -7,7 +7,10 @@ from path_config import data_path
 
 class sCMD:
 	def CMD_gen(self):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
+		if self.method == 'Vorbin':
+			subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh), '2.0'])
+		elif self.method == 'KS2d':
+			subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh), '3.0'])
 
 	def CMD_check(self):
 		check_time = 0

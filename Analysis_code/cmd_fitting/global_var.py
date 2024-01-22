@@ -44,7 +44,7 @@ def define_range(GC_name):
         dm_max = 15.8
         dm_min = 15.3
         red_max = 0.15
-        red_min = 0.08
+        red_min = 0.06
         feh=227
     return feh, dm_max, dm_min, red_max, red_min
 

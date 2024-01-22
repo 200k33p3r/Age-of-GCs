@@ -39,7 +39,8 @@ program MakeFakeCMD
   real, dimension(:),allocatable :: isomass,isoVI,isoV,isoI
   real :: temp,minmass,maxmass,IMFslope,m1,m2,powmass,age,Vsgb,Isgb, &
        Verr,Ierr, binaryfraction,secondarymass,Vsecondary,CMDage,  &
-       VIsecondary,Isecondary,Iprimary,Imag,Vtemp,Itemp,VItemp
+       VIsecondary,Isecondary,Iprimary,Imag,Vtemp,Itemp,VItemp,  &
+       deltaMag
 
   integer :: nstar  !number of fake stars to generate
 
@@ -49,7 +50,7 @@ program MakeFakeCMD
        indxmcnum,numrad,nummag, &
        fitindxmax,fitindxmin,npt
 
-  character(len=12) ::cIMFslope,cbinfrac,cnstar,cCMDage
+  character(len=12) ::cIMFslope,cbinfrac,cnstar,cCMDage, cdeltaMag
   character(len=150) :: filename
   character(len=1) :: c1
   character(len=4) :: chkstr="cmd."    ! extract MC number from isochorne filename
@@ -57,8 +58,8 @@ program MakeFakeCMD
   character(len=14) ::outfile
 
   n_args = command_argument_count()
-  if (n_args /= 5) then
-     write(*,*)'Usage: ./a.out  filename MassFunction_power_law_exponent Binary_Fraction Nstars CMDage'
+  if (n_args /= 6) then
+     write(*,*)'Usage: ./a.out  filename MassFunction_power_law_exponent Binary_Fraction Nstars CMDage Delta_mag'
      call get_command_argument(1,filename)
      filename = trim(filename)
      call get_command_argument(2,cIMFslope)
@@ -83,8 +84,11 @@ program MakeFakeCMD
   call get_command_argument(5,cCMDage)
   cCMDage = trim(cCMDage)
   read(cCMDage,*) CMDage
+  call get_command_argument(6,cdeltaMag)
+  cdeltaMag = trim(cdeltaMag)
+  read(cdeltaMag,*) deltaMag
  
-  write(*,*)"MassSlope, BinaryFrac, nstari, CMDage:", IMFslope, binaryfraction,nstar, CMDage
+  write(*,*)"MassSlope, BinaryFrac, nstari, CMDage, Delta_Mag:", IMFslope, binaryfraction,nstar, CMDage, deltaMag
 
   allocate (rdist(nstar),mass(nstar),VV(nstar),II(nstar),VI(nstar) )
 
@@ -154,7 +158,7 @@ program MakeFakeCMD
         read(10,*)
         read(10,*)
    !     read(10,*)
-        call findFitPoints(isoV,isoVI,niso,Vsgb,Isgb, indxmin,indxmax,fitindxmin,fitindxmax)
+        call findFitPoints(isoV,isoVI,niso,Vsgb,Isgb, indxmin,indxmax,fitindxmin,fitindxmax,deltaMag)
    !     write(*,*)'in main:',indxmin,indxmax,isomass(indxmin),isomass(indxmax), Vsgb
 
         minmass = isomass(indxmin)
@@ -399,7 +403,7 @@ end subroutine findIndxForErrors
 
 
 !----------------------------------------------------------------------------
-subroutine findFitPoints(VV,VI,niso,Vsgb,Isgb,indxmin,indxmax, fitindxmin,fitindxmax)
+subroutine findFitPoints(VV,VI,niso,Vsgb,Isgb,indxmin,indxmax, fitindxmin,fitindxmax, deltaMag)
   implicit none
 
   !find the location of the subgiant branch, and then the indexes to the
@@ -410,10 +414,9 @@ subroutine findFitPoints(VV,VI,niso,Vsgb,Isgb,indxmin,indxmax, fitindxmin,fitind
   integer :: niso, indxmin, indxmax,fitindxmin,fitindxmax
   real, dimension(niso) :: VV, VI
 
-  real ::  Vsgb, Isgb
+  real ::  Vsgb, Isgb, deltaMag !fit region is defined to be within +/-deltaMag of the SGB
 
   real, parameter  :: sgbDeltaColour = 0.05  !difference in color between MSTO & SGB
-  real, parameter :: deltaMag = 2.0   !fit region is defined to be within +/-deltaMag of the SGB
   integer :: i,ito,nmax,locate
   real :: minVI,VIsgb,hitmag
 
