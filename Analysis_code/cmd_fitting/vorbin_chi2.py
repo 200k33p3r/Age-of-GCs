@@ -509,8 +509,8 @@ class resample(utiles):
 		#print(self.obs_data['Ibin'] - 1)
 		sample_Iidx = self.obs_data['Ibin'].values[sample_list]-1
 		sample_Vidx = self.obs_data['Vbin'].values[sample_list]-1
-		indv_Iidx = np.floor(np.multiply(np.random.rand(self.sample_pt), self.dps_Ierr_len[sample_Iidx])).astype(int)
-		indv_Vidx = np.floor(np.multiply(np.random.rand(self.sample_pt), self.dps_Verr_len[sample_Vidx])).astype(int)
+		indv_Iidx = np.multiply(np.random.rand(self.sample_pt), self.dps_Ierr_len[sample_Iidx]).astype(int)
+		indv_Vidx = np.multiply(np.random.rand(self.sample_pt), self.dps_Verr_len[sample_Vidx]).astype(int)
 		#completeness test
 		Mask = np.multiply(self.completeness_I[sample_Iidx],self.completeness_V[sample_Vidx]) > np.random.rand(self.sample_pt)
 		for i in range(self.sample_pt):
