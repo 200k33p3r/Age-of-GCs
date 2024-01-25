@@ -260,14 +260,13 @@ class utiles:
 class chi2(utiles):
 
 	def read_input(self,path):
-		#read M92 observed data
-		if self.feh == 148:
-			#read NGC3201 DRCR data
-			obs_data = pd.read_csv(path)
+		#read observed data
+		obs_data = pd.read_csv(path)
+		if 'vi' not in obs_data.columns:
 			obs_data['vi'] = obs_data['v'] - obs_data['i']
-		else:
-			obs_data = pd.read_csv(path)
-		names = ['v','v_err','i','i_err','vi','vi_err','x','y']
+		elif 'i' not in obs_data.columns:
+			obs_data['i'] = obs_data['v'] - obs_data['vi']
+		names = ['v','i','vi','x','y']
 		for i in range(len(names)):
 			for j in range(len(obs_data.columns)):
 				if names[i] == obs_data.columns[j]:
