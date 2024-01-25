@@ -143,7 +143,7 @@ class utiles:
 		iso = open("{}/feh{}.{}".format(path,self.feh,self.mc_num), 'r')
 		len_file = len(iso.readlines())
 		iso.seek(0)
-		AGE_wanted = np.float(self.iso_age)
+		AGE_wanted = np.float32(self.iso_age)
 		if len_file < 10:
 			raise Exception("Empty file")
 		else:   

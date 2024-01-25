@@ -36,7 +36,7 @@ def define_range(GC_name):
         feh = 190
     elif GC_name == 'NGC3201':
         dm_max = 14.3
-        dm_min = 14.0
+        dm_min = 13.9
         red_max = 0.30
         red_min = 0.15
         feh=148
