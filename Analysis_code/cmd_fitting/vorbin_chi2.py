@@ -434,7 +434,8 @@ class KS_2d(utiles):
 		lower_vi = np.sort(fit_values_lower_cut[:,0])
 		sCMD_Pred_cdf = (self.ff(Obs_DM_Red_CR)*N_sCMD - np.searchsorted(lower_vi, Obs_DM_Red_CR[:,0],side='left'))/(Upper_N_sCMD - lower_N_sCMD)
 		mask = (self.Obs_cdf != 0.0) & (sCMD_Pred_cdf != 0.0)
-		return np.max(np.abs(sCMD_Pred_cdf[mask] - self.Obs_cdf[mask]))
+		delta_ecdf = np.abs(sCMD_Pred_cdf[mask] - self.Obs_cdf[mask])
+		return np.partition(delta_ecdf, int(len(delta_ecdf)*0.99))[int(len(delta_ecdf)*0.99)]
 
 	def main(self, cmd_path, dm_max, dm_min, red_max, red_min,chi2_path):
 		age = self.iso_age
