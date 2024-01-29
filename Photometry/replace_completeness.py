@@ -9,7 +9,7 @@ AS_path="{}/{}_inputfiles".format(os.getcwd(),GC_name)
 os.chdir(fidanka_path)
 for filename in os.listdir():
     if filename[1:4] == 'err':
-        if filename[4:] == 'Boundary.dat':
+        if filename[4:] == 'Boundarys.dat':
             target = open(filename, "r+")
             lines = target.readlines()
             AS_file = open("{}/{}".format(AS_path,filename), "r+")

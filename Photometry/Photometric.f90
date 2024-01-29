@@ -7,11 +7,11 @@ program PhotometricProperties
   ! turn-off (defined by Vmin, Vmax, VImin and VImax).
   ! I use VV for F606W and VI for F606W-F814W filters
   ! assumses a guess center of cluster is at  3000,3000   !  Variable Declarations
-  real, parameter :: Vmax = -11.01
-  real, parameter :: Vmin = -15.01
-  real, parameter :: VImin = -0.308
-  real, parameter :: VImax = 0.029
-  real, parameter :: Vshort_long = -13.41 !magnitude between short/long
+  real, parameter :: Vmax = -11.95
+  real, parameter :: Vmin = -15.9493
+  real, parameter :: VImin = -0.893
+  real, parameter :: VImax = 1.2551
+  real, parameter :: Vshort_long = -14.18 !magnitude between short/long
                      !exposure
   integer, parameter :: Nmagbins = 12 !totalnumber of mag bins
   integer, parameter :: Nradbins = 10 !number of radial bins  
@@ -26,7 +26,7 @@ program PhotometricProperties
        vto, vito  !temp arrays
   real :: ii_in,ii_out,xcenter,ycenter
   integer :: i1,i2,i3,i4  
-  character(len=40) :: filename
+  character(len=80) :: filename
   character(len=10) :: cNstars
   integer :: n_args  !read in Sample Size & filename from command line
   n_args = command_argument_count()

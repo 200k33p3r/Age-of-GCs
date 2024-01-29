@@ -55,16 +55,14 @@ class phot:
         if GC_name == 'M55':
             self.V_diff = 30.98
             self.I_diff = self.V_diff-0.737
-                #define all the path for read and write
-        if GC_name == 'M55':
-            # repo_path = '/home/mying/Desktop/GC_Ages/Age-of-GCs'
-            # resample_path = '/media/sf_share/{}_data/resample'.format(GC_name)
-            cwd = os.getcwd()
-            repo_path = os.path.abspath(os.path.join(cwd, os.pardir))
+        elif GC_name == 'NGC3201':
+            self.V_diff = 31.4
+            self.I_diff = self.V_diff-0.897
+        #define all the path for read and write
+        cwd = os.getcwd()
+        repo_path = os.path.abspath(os.path.join(cwd, os.pardir))
         data_path = "{}/{}_data".format(repo_path, GC_name)
-        photometry_folder = "{}/Photometry".format(repo_path)
-        photometry_path = "{}/{}_inputfiles".format(photometry_folder,GC_name)
-        obs_data_path = "{}/{}_fitstars.dat".format(data_path,GC_name)
+        obs_data_path = "{}/{}_fitstars_DRCR.dat".format(data_path,GC_name)
         iso_path = "{}/fiducial_lines.csv".format(data_path)
         fiducial_AS_path = "{}/{}_fiducial_artstars.dat".format(data_path,GC_name)
 
