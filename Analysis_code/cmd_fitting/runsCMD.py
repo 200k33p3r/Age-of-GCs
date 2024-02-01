@@ -28,7 +28,7 @@ class sCMD:
 	
 	def run_vorbin(self):
 		if self.method == 'Vorbin':
-			vorbin_chi2.chi2(self.GC_name, self.mc_num, self.age,UniSN=False, write_vorbin=False)
+			vorbin_chi2.chi2(self.GC_name, self.mc_num, self.age,UniSN=True, write_vorbin=False)
 		elif self.method == 'KS2d':
 			vorbin_chi2.KS_2d(self.GC_name,self. mc_num, self.age)
 		else:
