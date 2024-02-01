@@ -177,7 +177,7 @@ class utiles:
 		if UniSN == True:
 			V, VI = Mags
 			#Define number of stars used to generate vorbin based on TargetSN and bin_num
-			fit_num = 800*targetSN**2
+			fit_num = self.target_Nbin*targetSN**2
 			mask = np.random.choice(range(len(V)), size=fit_num, replace=False)
 			x = V[mask]
 			y = VI[mask]
@@ -386,13 +386,14 @@ class chi2(utiles):
 		# 		chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
 		# self.chi2 = chi2
 
-	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30):
+	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30,target_Nbin=800):
 		#define distance modulus and reddening ranges
 		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
 		self.Tb_size = Tb_size
+		self.target_Nbin = target_Nbin
 		#define all the path for read and write
 		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		vorbin_path = data_path + "{}/vorbin".format(GC_name)
