@@ -354,23 +354,29 @@ class chi2(utiles):
 		# retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, len(self.obs_cut(dm_fit, red_fit))])
 
 
-		#implement differential Evolution algorithm
-		bounds = [(dm_min, dm_max) ,(red_min,red_max)]
-		res = DE(self.dm_red_search, bounds,tol=0.001,popsize=50)
+		# #implement differential Evolution algorithm
+		# bounds = [(dm_min, dm_max) ,(red_min,red_max)]
+		# res = DE(self.dm_red_search, bounds,tol=0.001,popsize=50)
+		# chi2_fit, dm_fit, red_fit = res['fun'], res['x'][0], res['x'][1]
+
+		# #define new bounds based on +/- 0.01 mag from the fit dm an +/- 0.01 mag in reddening
+		# dm_bound = np.linspace(dm_fit - 0.01, dm_fit + 0.01, 20)
+		# red_bound = np.linspace(red_fit - 0.01, red_fit + 0.01, 20)
+		# #run the grid search
+		# for dm in dm_bound:
+		# 	for red in red_bound:
+		# 		chi2 = self.dm_red_search([dm,red])
+		# 		if chi2 < chi2_fit:
+		# 			chi2_fit = chi2
+		# 			dm_fit = dm
+		# 			red_fit = red
+		res = gp_minimize(self.dm_red_search,                  # the function to minimize
+                  [(dm_min, dm_max), (red_min, red_max)],      # the bounds on each dimension of x
+                  acq_func="EI",      # the acquisition function
+                  n_calls=50,         # the number of evaluations of f
+                  n_random_starts=20,
+                  verbose=False)
 		chi2_fit, dm_fit, red_fit = res['fun'], res['x'][0], res['x'][1]
-
-		#define new bounds based on +/- 0.01 mag from the fit dm an +/- 0.01 mag in reddening
-		dm_bound = np.linspace(dm_fit - 0.01, dm_fit + 0.01, 20)
-		red_bound = np.linspace(red_fit - 0.01, red_fit + 0.01, 20)
-		#run the grid search
-		for dm in dm_bound:
-			for red in red_bound:
-				chi2 = self.dm_red_search([dm,red])
-				if chi2 < chi2_fit:
-					chi2_fit = chi2
-					dm_fit = dm
-					red_fit = red
-
 		#write out the result
 		retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, len(self.obs_cut(dm_fit, red_fit))])
 		#print(chi2)
@@ -386,7 +392,7 @@ class chi2(utiles):
 		# 		chi2.append([age, dm, red, np.inner(np.divide(bin_count,bin_count_std/(total_pt/obs_size)) - 1, bin_count - bin_count_std/(total_pt/obs_size))])
 		# self.chi2 = chi2
 
-	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=30,target_Nbin=800):
+	def __init__(self, GC_name, mc_num, iso_age, UniSN=False, write_vorbin=False, Tb_size=100,target_Nbin=800):
 		#define distance modulus and reddening ranges
 		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		#define other global variables
