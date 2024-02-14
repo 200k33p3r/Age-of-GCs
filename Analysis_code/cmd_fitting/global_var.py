@@ -46,6 +46,12 @@ def define_range(GC_name):
         red_max = 0.15
         red_min = 0.06
         feh=227
+    elif GC_name == 'M30':
+        feh=210
+        dm_max = 14.9
+        dm_min = 14.6
+        red_max = 0.10
+        red_min = 0.0
     return feh, dm_max, dm_min, red_max, red_min
 
 def define_N_true_obs(GC_name):
@@ -56,10 +62,6 @@ def define_N_true_obs(GC_name):
 def define_N_phot(GC_name):
     if GC_name == 'M92':
         N_phot = 80
-    elif GC_name == 'NGC3201':
+    else:
         N_phot = 120
-    elif GC_name == 'M55':
-        N_phot = 120
-    elif GC_name == 'M15':
-        N_phot = 120  
     return N_phot
