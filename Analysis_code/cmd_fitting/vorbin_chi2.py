@@ -1013,10 +1013,11 @@ class chi2_iso(utiles):
 					setattr(self,names[i] + '_idx', j)
 		self.obs_data = pd.read_csv(path,skiprows=3, sep='\s+',names=names).to_numpy()
 
-	def __init__(self, GC_name, mc_num, age, obs_i, resample_i, UniSN=False, write_vorbin=False, Tb_size=30):
+	def __init__(self, GC_name, mc_num, age, obs_i, resample_i, UniSN=False, write_vorbin=False, Tb_size=30, target_Nbin=800):
 		#define distance modulus and reddening ranges
 		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		self.Tb_size = Tb_size
+		self.target_Nbin = target_Nbin
 		#define all the path for read and write
 		obs_data_path = "{}{}/outcmd".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(obs_i))
 		vorbin_path = "{}{}/vorbin".format(resample_path, GC_name) + "/mc{}.a{}_{}".format(mc_num,age, str(resample_i))

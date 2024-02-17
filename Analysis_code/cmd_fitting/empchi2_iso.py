@@ -7,7 +7,7 @@ from path_config import resample_path
 
 class resample_iso:
 	def CMD_gen(self,resample_num):
-		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh)])
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh), '2.0'])
 		source = self.outcmd_path + "/mc{}.a{}".format(self.mc_num,self.age)
 		dest = self.outcmd_path + "/mc{}.a{}_{}".format(self.mc_num,self.age, str(resample_num))
 		os.rename(source,dest)
