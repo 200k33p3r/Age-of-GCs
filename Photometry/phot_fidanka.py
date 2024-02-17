@@ -58,11 +58,17 @@ class phot:
         elif GC_name == 'NGC3201':
             self.V_diff = 31.4
             self.I_diff = self.V_diff-0.897
+        elif GC_name == 'M15':
+            self.V_diff = 31.86
+            self.I_diff = self.V_diff-0.713
+        elif GC_name == 'M30':
+            self.V_diff = 31.70
+            self.I_diff = self.V_diff-0.885
         #define all the path for read and write
         cwd = os.getcwd()
         repo_path = os.path.abspath(os.path.join(cwd, os.pardir))
         data_path = "{}/{}_data".format(repo_path, GC_name)
-        obs_data_path = "{}/{}_fitstars_DRCR.dat".format(data_path,GC_name)
+        obs_data_path = "{}/{}_fitstars.dat".format(data_path,GC_name)
         iso_path = "{}/fiducial_lines.csv".format(data_path)
         fiducial_AS_path = "{}/{}_fiducial_artstars.dat".format(data_path,GC_name)
 
