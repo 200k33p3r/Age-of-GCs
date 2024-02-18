@@ -39,3 +39,5 @@ cp fit_id.dat ../${file_dir}
 cp Distance.dat ../${file_dir}
 cd ..
 rm -rf ${file_temp}
+
+python replace_completenes.py $GC_name

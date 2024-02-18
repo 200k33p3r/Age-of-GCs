@@ -543,7 +543,7 @@ end subroutine findFitPoints
 !           write(*,*)"reading file: ", filename1
            open(unit=11, file=filename1)
            read(11,*)
-           read(11,'(3X,I3, 1x, F9.4, 2x, F10.6, 1x, F8.6)') numt,tr,tv,tcomp
+           read(11,'(2X,I4, 1x, F9.4, 2x, F10.6, 1x, F8.6)') numt,tr,tv,tcomp
            read(11,*)
            if ( numt /= nhist(j,k,ifilter)  ) then
               write(*,*)'something odd: ', numt, nhist(j,k,ifilter),j,k,ifilter
