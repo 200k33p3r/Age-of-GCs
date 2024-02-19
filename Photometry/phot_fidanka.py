@@ -68,7 +68,7 @@ class phot:
         cwd = os.getcwd()
         repo_path = os.path.abspath(os.path.join(cwd, os.pardir))
         data_path = "{}/{}_data".format(repo_path, GC_name)
-        obs_data_path = "{}/{}_fitstars.dat".format(data_path,GC_name)
+        obs_data_path = "{}/{}_fitstars_2dKS_DRCR.dat".format(data_path,GC_name)
         iso_path = "{}/fiducial_lines.csv".format(data_path)
         fiducial_AS_path = "{}/{}_fiducial_artstars.dat".format(data_path,GC_name)
 

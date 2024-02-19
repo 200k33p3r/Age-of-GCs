@@ -40,4 +40,4 @@ cp Distance.dat ../${file_dir}
 cd ..
 rm -rf ${file_temp}
 
-python replace_completenes.py $GC_name
+python replace_completeness.py $GC_name
