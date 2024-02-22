@@ -374,7 +374,7 @@ class chi2(utiles):
                   [(dm_min, dm_max), (red_min, red_max)],      # the bounds on each dimension of x
                   acq_func="EI",      # the acquisition function
                   n_calls=50,         # the number of evaluations of f
-                  n_random_starts=20,
+                  n_random_starts=50,
                   verbose=False)
 		chi2_fit, dm_fit, red_fit = res['fun'], res['x'][0], res['x'][1]
 		#write out the result
@@ -458,7 +458,7 @@ class KS_2d(utiles):
                   [(dm_min, dm_max), (red_min, red_max)],      # the bounds on each dimension of x
                   acq_func="EI",      # the acquisition function
                   n_calls=50,         # the number of evaluations of f
-                  n_random_starts=10,
+                  n_random_starts=50,
                   verbose=False)
 		retval = np.array([self.iso_age, res.x[0], res.x[1], res.fun])
 		#print(chi2)
