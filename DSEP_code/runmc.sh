@@ -54,8 +54,6 @@ mkdir $out
 storeoutput=/dartfs-hpc/rc/lab/C/ChaboyerB/Catherine/M55
 echo "Output dir: $storeoutput"
 
-
-
 ID=GS98
 Lmass=($(seq 200 40 690))
 MLmass=($(seq 700 50 1400))
@@ -90,6 +88,13 @@ echo "Z= $zz"
 
 xx=$(awk "BEGIN {print 1.0-$zz-$yy}")
 echo "X= $xx"
+
+#check if file exist. If so, stop the code from running
+if [ -f $storeoutput/mcfeh$intfeh.$runum.tar ]; then
+  echo "File exists." && exit 0
+else
+  echo "File does not exist, ready to start DSEP"
+fi
 
 #input various subroutines
 
