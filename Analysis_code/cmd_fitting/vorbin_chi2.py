@@ -420,19 +420,21 @@ class chi2(utiles):
 
 class KS_2d(utiles):
 	def read_input(self,path):
-		#read M92 observed data
-		# names = ['v','v_err','i','i_err','vi','vi_err','x','y']
-		# for i in range(len(names)):
-		# 	for j in range(len(obs_data.columns)):
-		# 		if names[i] == obs_data.columns[j]:
-		# 			setattr(self,names[i] + '_idx', j)
-		self.obs_data = pd.read_csv(path)[['vi','v']].to_numpy()
+		self.obs_data = pd.read_csv(path)[['vi','v']]
+		if self.VVI==True:
+			self.obs_data = self.obs_data.to_numpy()
+		else:
+			self.obs_data['i'] = self.obs_data['v'] - self.obs_data['vi']
+			self.obs_data = self.obs_data[['i','v']].to_numpy()
 		self.obs_data[:,1] = - self.obs_data[:,1]
 
 	def evaluate(self, theta):
 		dm,red = theta
 		#cut the sCMD data first
-		Obs_DM_Red_CR = self.obs_data - [red, -dm]
+		if self.VVI == True:
+			Obs_DM_Red_CR = self.obs_data - [red, -dm]
+		else:
+			Obs_DM_Red_CR = self.obs_data - [dm + red, -dm]
 		max_v, min_v = max(Obs_DM_Red_CR[:,1]), min(Obs_DM_Red_CR[:,1])
 		fit_values_lower_cut = self.fit_values[self.fit_values[:,1] < min_v]
 		Upper_N_sCMD = len(self.fit_values[self.fit_values[:,1] < max_v])
@@ -448,7 +450,11 @@ class KS_2d(utiles):
 		age = self.iso_age
 		#read cmd files
 		sCMD = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
-		self.fit_values = sCMD.values
+		if self.VVI==True:
+			self.fit_values = sCMD.values
+		else:
+			sCMD['i'] = sCMD['v'] - sCMD['vi']
+			self.fit_values = sCMD[['i','v']].values
 		self.fit_values[:,1] = -self.fit_values[:,1]
 		#find ecdf for the sCMD
 		self.ff = LinearNDInterpolator(self.fit_values, self.rankn(self.fit_values)/len(self.fit_values), fill_value=0)
@@ -465,12 +471,14 @@ class KS_2d(utiles):
 		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
 
 	#use 2d KS test to calculate the Metric for the input isochrones
-	def __init__(self, GC_name, mc_num, iso_age):
+	def __init__(self, GC_name, mc_num, iso_age,VVI=True):
 		#define distance modulus and reddening ranges
 		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		#define other global variables
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
+		#VVI is the flag. When True, fit CMD (vi vs v). When False, fit (i vs v)
+		self.VVI = VVI
 		#define all the path for read and write
 		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		chi2_path = data_path + "{}/outchi2".format(GC_name)
