@@ -41,10 +41,10 @@ def define_range(GC_name):
         red_min = 0.15
         feh=148
     elif GC_name == 'M15':
-        dm_max = 15.8
+        dm_max = 15.6
         dm_min = 15.3
         red_max = 0.15
-        red_min = 0.06
+        red_min = 0.08
         feh=227
     elif GC_name == 'M30':
         feh=210
