@@ -7,7 +7,7 @@ from path_config import data_path
 
 class sCMD:
 	def CMD_gen(self):
-		if self.method == 'Vorbin':
+		if self.method == 'Vorbin' or self.method == 'kde':
 			subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh), '2.0'])
 		elif self.method == 'KS2d':
 			subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '4000000', str(self.age), str(self.GC_name),str(self.feh), '3.0'])
@@ -31,6 +31,8 @@ class sCMD:
 			vorbin_chi2.chi2(self.GC_name, self.mc_num, self.age,UniSN=True, write_vorbin=False)
 		elif self.method == 'KS2d':
 			vorbin_chi2.KS_2d(self.GC_name,self. mc_num, self.age)
+		elif self.method == 'kde':
+			vorbin_chi2.kde(self.GC_name,self. mc_num, self.age)
 		else:
 			raise Exception('Cannot find the method to be used to analyse CMD')
 

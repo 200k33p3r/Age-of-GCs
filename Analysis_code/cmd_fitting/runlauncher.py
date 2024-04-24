@@ -5,10 +5,6 @@ import numpy as np
 import time
 
 GC_name = str(sys.argv[1])
-#mc_num = str(sys.argv[2])
-#age = str(sys.argv[3])
-#method = str(sys.argv[4])
-
 order_num = str(sys.argv[2])
 ages=np.linspace(8000,16000,41)
 mc_num = str(10000 + int(order_num)//2)
