@@ -3,8 +3,8 @@
 GC_name=$1
 feh=$2
 
-progdir=/home/mying/Desktop/M55_data/CalibrationStarTest
-data_dir=/home/mying/Desktop/
+progdir=/home/mying/Desktop/Calibration_star
+data_dir=/home/mying/Desktop/Calibration_star/
 isodir=${data_dir}${GC_name}_data/${GC_name}_iso
 
 

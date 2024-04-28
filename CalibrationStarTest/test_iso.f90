@@ -56,7 +56,7 @@ program test_iso
   data_dir = trim(data_dir)
 
 ! read in calibration stars
-  cali_file = trim(data_dir)//trim(GC_name)//"_data/Calibration_stars.csv"
+  cali_file = trim(data_dir)//trim(GC_name)//"_data/Cali_stars.csv"
   open(unit=26, file = cali_file, status='old')
    read(26,*) nstar
    if (nstar < 1) then

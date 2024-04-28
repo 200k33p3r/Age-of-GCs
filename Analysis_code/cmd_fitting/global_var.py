@@ -16,7 +16,7 @@ def sCMD_vars(GC_name):
         pdmf=-0.99
     elif GC_name == 'M30':
         #pdmf from Ebrahimi et al (2020)
-        feh=210
+        feh=231
         binary=0.012
         pdmf=-0.80
     return feh, binary, pdmf
@@ -47,7 +47,7 @@ def define_range(GC_name):
         red_min = 0.08
         feh=227
     elif GC_name == 'M30':
-        feh=210
+        feh=231
         dm_max = 14.9
         dm_min = 14.6
         red_max = 0.10
