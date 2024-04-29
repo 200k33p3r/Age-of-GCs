@@ -19,7 +19,7 @@ program PhotoPropI
   !magnitude between short and long exposures, first F606W and then F814W!
 !  real, parameter :: Ishort_long = -13.9
   integer, parameter :: Nmagbins = 12 !totalnumber of mag bins (must be even)
-  integer, parameter :: Nradbins= 10 !number of radial bins
+  integer, parameter :: Nradbins= 6 !number of radial bins
   integer :: Nstars,nfitI,nfitV,nfit,i,j,id,k
   real, dimension(:), allocatable :: vti,iiti, vto,iito
   real :: ii_in,ii_out,xcenter,ycenter

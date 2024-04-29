@@ -14,7 +14,7 @@ program PhotometricProperties
   real, parameter :: Vshort_long = -14.05 !magnitude between short/long
                      !exposure
   integer, parameter :: Nmagbins = 12 !totalnumber of mag bins
-  integer, parameter :: Nradbins = 10 !number of radial bins  
+  integer, parameter :: Nradbins = 6 !number of radial bins  
   integer :: Nstars,nfit,i,j,id
   REAL, dimension(:),allocatable :: xin,yin,vin,viin,  &
        xout,yout,vout,viout,dist
