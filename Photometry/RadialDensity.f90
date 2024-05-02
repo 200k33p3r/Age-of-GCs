@@ -14,7 +14,7 @@ program RadialDensity
   REAL, dimension(:),allocatable :: xx,yy,fit_id
   REAL, dimension(:),allocatable :: xt,yt,vt,vit,dist2,idlist
   real :: t1,t2,t3,t4,rad2,xcen,ycen,area  
-  character(len=40) :: filename
+  character(len=100) :: filename
   character(len=10) :: cNstars
   integer :: n_args  !read in Sample Size  from command line
   n_args = command_argument_count()

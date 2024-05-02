@@ -19,7 +19,7 @@ gfortran -c qsort.f90
 gfortran RadialDensity.f90 qsort.o -o RadialDensity
 
 AS_path=../../${GC_name}_data/${GC_name}artstars.dat
-obs_path=../../${GC_name}_data/${GC_name}_fitstars.dat
+obs_path=../../${GC_name}_data/${GC_name}_fitstars_ZPCR.dat
 
 AS_stars=$((`wc --lines < $AS_path` - 1))
 obs_stars=$((`wc --lines < $obs_path` - 1))
