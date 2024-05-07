@@ -24,6 +24,14 @@ def sCMD_vars(GC_name):
         binary= 0.029
         #pdmf from Sollima, A. and Baumgardt, H. 2017
         pdmf= 0.03     
+    elif GC_name == 'NGC5053':
+        feh=225
+        binary= 0.073
+        pdmf= -1.26     
+    elif GC_name == 'NGC5466':
+        # feh=225
+        binary= 0.066
+        pdmf= -1.14  
     return feh, binary, pdmf
 
 def define_range(GC_name):
@@ -58,9 +66,21 @@ def define_range(GC_name):
         red_max = 0.10
         red_min = 0.0
     elif GC_name == 'NGC4147':
-        feh=182
+        feh=225
         dm_max = 16.5
         dm_min = 16.2
+        red_max = 0.03
+        red_min = 0.0
+    elif GC_name == 'NGC5053':
+        feh=182
+        dm_max = 16.4
+        dm_min = 16.1
+        red_max = 0.03
+        red_min = 0.0
+    elif GC_name == 'NGC5466':
+        # feh=182
+        dm_max = 16.25
+        dm_min = 15.95
         red_max = 0.03
         red_min = 0.0
     return feh, dm_max, dm_min, red_max, red_min
