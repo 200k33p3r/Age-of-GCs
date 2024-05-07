@@ -15,7 +15,7 @@ class sCMD:
 	def CMD_check(self):
 		check_time = 0
 		exist = False
-		while check_time < 10 and exist == False:
+		while check_time < 3 and exist == False:
 			check_time += 1
 			if os.path.exists("{}/mc{}.a{}".format(self.outcmd_path,self.mc_num, self.age)):
 				exist = True
