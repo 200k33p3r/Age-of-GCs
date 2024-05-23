@@ -29,7 +29,7 @@ def sCMD_vars(GC_name):
         binary= 0.073
         pdmf= -1.26     
     elif GC_name == 'NGC5466':
-        # feh=225
+        feh=200
         binary= 0.066
         pdmf= -1.14  
     return feh, binary, pdmf
@@ -78,7 +78,7 @@ def define_range(GC_name):
         red_max = 0.03
         red_min = 0.0
     elif GC_name == 'NGC5466':
-        # feh=182
+        feh=200
         dm_max = 16.25
         dm_min = 15.95
         red_max = 0.03
