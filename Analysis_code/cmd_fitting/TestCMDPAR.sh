@@ -13,6 +13,7 @@ cmdage=$6
 GC_name=$7
 feh=$8
 deltaMag=$9
+resample_id=${10}
 
 local=/work2/08819/mying/$GC_name/simulateCMD
 inputiso=/work2/08819/mying/$GC_name/outiso
@@ -50,18 +51,10 @@ gfortran -c define_errors.f90
 gfortran -c random.f90
 gfortran MakeTestCMD.f90 define_errors.o random.o real_precision.o -o MakeTestCMD
 
-
-
-#read from the command line which runs to do and simulation parameters
-if [ $# -ne 9 ]; then
-    echo "usage: SimulateCMD.sh 'first run' 'last run' 'PDMF slope' 'binary fraction' 'number simulated stars' 'cmdage' 'GC_names' 'feh' 'deltaMag'"
-    exit 1
-fi 
-
 for ((r=frun; r <= lrun; r++ )); do
    echo "$inputiso/feh${feh}cmd.$r    $pdmf"
   time ./MakeTestCMD $inputiso/feh${feh}cmd.$r  $pdmf $binaryfrac  $numstars $cmdage $deltaMag
-  mv $tmp/mc$r.* $out/.
+  mv $tmp/mc$r.a$cmdage $out/mc$r.a$cmdage$resample_id
 done
 
 cd $local

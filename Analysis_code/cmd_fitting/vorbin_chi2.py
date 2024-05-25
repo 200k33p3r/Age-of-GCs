@@ -3,14 +3,16 @@
 import numpy as np
 import pandas as pd
 import os
+import pickle
+import subprocess
+from multiprocessing import Pool
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 from scipy.interpolate import interp1d, RectBivariateSpline
 from scipy.optimize import differential_evolution as DE
 from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
-from global_var import define_range, define_N_true_obs, define_N_phot
+from global_var import define_range, define_N_true_obs, define_N_phot, sCMD_vars
 from path_config import data_path, resample_path,repo_path,obs_type
-import fastkde
 
 np.seterr(divide='ignore', invalid='ignore')
 #from bayes_opt import BayesianOptimization
@@ -359,6 +361,7 @@ class utiles:
 
 #rewrite kde class to cut obs data instead
 class kde(utiles):
+	import fastkde
 	def kde_chi2(self, theta):
 		dm, red = theta
 		#cut the sCMD 
@@ -1250,3 +1253,101 @@ class chi2_iso(utiles):
 		df_retval.to_csv(chi2_path,index=False,mode='a',header=not os.path.exists(chi2_path))
 
 		print("done obs:{}, resample:{}".format(obs_i, resample_i))
+
+class KS_2d_resample(utiles):
+	def evaluate(self,obs_data, obs_cdf):
+		max_v, min_v = max(obs_data[:,1]), min(obs_data[:,1])
+		fit_values_lower_cut = self.fit_values[self.fit_values[:,1] < min_v]
+		Upper_N_sCMD = len(self.fit_values[self.fit_values[:,1] < max_v])
+		lower_N_sCMD = len(fit_values_lower_cut)
+		N_sCMD = len(self.fit_values)
+		lower_vi = np.sort(fit_values_lower_cut[:,0])
+		sCMD_Pred_cdf = (self.ff(obs_data)*N_sCMD - np.searchsorted(lower_vi, obs_data[:,0],side='left'))/(Upper_N_sCMD - lower_N_sCMD)
+		mask = (obs_cdf != 0.0) & (sCMD_Pred_cdf != 0.0)
+		delta_ecdf = np.abs(sCMD_Pred_cdf[mask] - obs_cdf[mask])
+		return np.partition(delta_ecdf, int(len(delta_ecdf)*0.99))[int(len(delta_ecdf)*0.99)]
+
+	def generatesCMD(self, cmd_path):
+		#used to generate sCMD and store the linear interpolation function as a pickel file
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '1000000', str(self.iso_age), str(self.GC_name),str(self.feh), '3.0'])
+		sCMD = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num, self.iso_age),sep='\s+',names=['vi','v'],skiprows=3)
+		if self.VVI==True:
+			fit_values = sCMD.values
+		else:
+			sCMD['i'] = sCMD['v'] - sCMD['vi']
+			fit_values = sCMD[['i','v']].values
+		fit_values[:,1] = - fit_values[:,1]
+		#find ecdf for the sCMD
+		ff = LinearNDInterpolator(fit_values, self.rankn(fit_values)/len(fit_values), fill_value=0)
+		with open('sCMD.pickle', 'wb') as f:
+			# Write object `ip` to file
+			pickle.dump(ff, f, pickle.HIGHEST_PROTOCOL)
+
+	def main(self, i, cmd_path, chi2_path):
+		#generate fake observation
+		subprocess.run(['./TestCMDPAR.sh', str(self.mc_num), str(self.mc_num), str(self.pdmf), str(self.binary), '100000', str(self.iso_age), str(self.GC_name),str(self.feh), '2.0',".rid_{}".format(i)])
+		#read cmd files
+		sCMD_path = "{}/mc{}.a{}.rid_{}".format(cmd_path,self.mc_num,self.iso_age,i)
+		sCMD = pd.read_csv(sCMD_path,sep='\s+',names=['vi','v'],skiprows=3).sample(self.n_obs).copy()
+		if os.path.exists(sCMD_path) == True:
+			os.remove(sCMD_path)
+		if self.VVI==True:
+			obs_data = sCMD.values
+		else:
+			sCMD['i'] = sCMD['v'] - sCMD['vi']
+			obs_data = sCMD[['i','v']].values
+		obs_data[:,1] = -obs_data[:,1]
+		#go through the search process
+		obs_cdf = self.rankn(obs_data)/len(obs_data)
+		resample_chi2 = self.evaluate(obs_data,obs_cdf)
+		file1 = open("{}/resample_chi2_2dks.dat".format(chi2_path), "a")  # append mode
+		file1.write("{:.5f} {}\n".format(i,resample_chi2))
+		file1.close()
+		print("Done resample {}".format(i))
+	
+	#use 2d KS test to calculate the Metric for the input isochrones
+	def __init__(self, GC_name, mc_num, iso_age, n_resample, n_pool = 1, first_run = False, VVI=True):
+		#define distance modulus and reddening ranges
+		self.feh, self.binary, self.pdmf = sCMD_vars(GC_name)
+		#define other global variables
+		self.GC_name = str(GC_name)
+		self.mc_num = str(mc_num)
+		self.iso_age = str(iso_age)
+		#VVI is the flag. When True, fit CMD (vi vs v). When False, fit (i vs v)
+		self.VVI = VVI
+		#define all the path for read and write
+		chi2_path = resample_path + "{}/outchi2".format(GC_name)
+		cmd_path = resample_path + "{}/simulateCMD/outcmd".format(GC_name)
+		iso_path = resample_path + "{}/outiso".format(GC_name)
+		ff_path = resample_path + "{}/simulateCMD/sCMD.pickle".format(GC_name)
+		#check those directories exist
+		self.check_directories(chi2_path)
+		self.check_directories(cmd_path)
+		self.check_directories(iso_path)
+		#read the number of stars in real obs data
+		True_obs_path = repo_path + "{}_data/{}_{}".format(GC_name,GC_name,obs_type)
+		True_obs = pd.read_csv(True_obs_path)
+		self.n_obs = len(True_obs)
+		#generate sCMD first
+		if first_run == True:
+			self.generatesCMD(cmd_path)
+		else:
+			#check if sCMD exist
+			self.check_file(ff_path)
+			#read sCMD
+			with open('sCMD.pickle', 'rb') as f:
+				# Read out object `ip` from file
+				self.ff = pickle.load(f)
+			f.close()
+			sCMD = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,self.iso_age),sep='\s+',names=['vi','v'],skiprows=3)
+			if self.VVI==True:
+				self.fit_values = sCMD.values
+			else:
+				sCMD['i'] = sCMD['v'] - sCMD['vi']
+				self.fit_values = sCMD[['i','v']].values
+			self.fit_values[:,1] = -self.fit_values[:,1]
+			paramlist = []
+			for i in range(n_resample):
+				paramlist.append((i, cmd_path, chi2_path))
+			with Pool(n_pool, initializer=np.random.seed) as MP_pool:
+				MP_pool.starmap(self.main, paramlist)
