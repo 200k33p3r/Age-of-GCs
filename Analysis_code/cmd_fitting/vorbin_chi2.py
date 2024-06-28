@@ -361,69 +361,59 @@ class utiles:
 
 #rewrite kde class to cut obs data instead
 class kde(utiles):
-	import fastkde
-	def kde_chi2(self, theta):
-		dm, red = theta
-		#cut the sCMD 
-		obs_cr = self.obs_cut(dm, red)
-		obs_cr[:,1] -= dm
-		obs_cr[:,0] -= red
-		#find PDF for sCMD
-		PDF_obs = fastkde.pdf(obs_cr[:,0], obs_cr[:,1], axes=np.vstack((self.vi_grids, self.v_grids)), do_xarray_subset=False, var_names = ['vi', 'v'])
-		# #find chi2
-		# chi2 = np.divide(np.square(self.PDF_obs.values - PDF_sCMD.values),PDF_sCMD.values)
-		# #use only some percent of the bins to avoid the influence of small number statistics
-		# self.bin_num = int(np.size(PDF_sCMD.values)*(1-self.bin_percent))
-		# cut_density = np.partition(PDF_sCMD.values.flatten(), self.bin_num)[self.bin_num]
-		# if cut_density == 0.0:
-		# 	print('the bin_percentage is too low')
-		# 	chi2_cr = 100000
-		# 	# mask = (PDF_sCMD.values>0.1)
-		# 	# self.bin_num = np.size(mask[mask])
-		# else:
-		# 	mask = (PDF_sCMD.values>cut_density)
-		# 	chi2_cr = np.where(mask, chi2, np.zeros(np.shape(chi2)))/(self.bin_num - 22)
-		#find chi2
-		chi2 = np.divide(np.square(PDF_obs.values - self.PDF_sCMD.values),self.PDF_sCMD.values, out = np.zeros(np.shape(self.mask)), where=self.mask)
-		return np.sum(chi2)
+	from KDEpy import FFTKDE
+	from bayes_opt import BayesianOptimization
+	from scipy.spatial.distance import jensenshannon
+
+	def dm_red_kde(self, dm, red):
+		i_sCMD_CR = self.i_sCMD + dm - red
+		v_sCMD_CR = self.v_sCMD + dm
+		mask = (i_sCMD_CR < self.i_obs_max) & (i_sCMD_CR > self.i_obs_min) & (v_sCMD_CR > self.v_obs_min) & (v_sCMD_CR < self.v_obs_max)
+		i_sCMD_CR = i_sCMD_CR[mask]
+		v_sCMD_CR = v_sCMD_CR[mask]
+		retval = self.distance_calc(i_sCMD_CR, v_sCMD_CR)
+		return retval
 	
-	def main(self, cmd_path, dm_max, dm_min, red_max, red_min,chi2_path,grid_size):
-		#check if the grid size is power of 2
-		if not(grid_size & (grid_size - 1)) == False:
-			raise ValueError('grid_size must be a power of 2')
+	def distance_calc(self, i_sCMD_CR, v_sCMD_CR):
+		epsilon=self.epsilon
+		grid_i = np.linspace(self.i_obs_min-epsilon,self.i_obs_max+epsilon,self.n_grid)
+		grid_v = np.linspace(self.v_obs_min-epsilon,self.v_obs_max+epsilon,self.n_grid)
+		grid = np.flip(np.stack(np.meshgrid(grid_v, grid_i), -1).reshape(-1, 2),axis=1)
+		y_obs = FFTKDE(kernel='gaussian', bw=self.bw, norm=1).fit(data = np.vstack([self.i_obs,self.v_obs]).T).evaluate(grid)
+		y_sCMD = FFTKDE(kernel='gaussian', bw=self.bw, norm=1).fit(data = np.vstack([i_sCMD_CR,v_sCMD_CR]).T).evaluate(grid)
+		mask = (y_obs >= 0) & (y_sCMD >= 0)
+		return -jensenshannon(y_obs[mask],y_sCMD[mask])
+		
+	def main(self, cmd_path, dm_max, dm_min, red_max, red_min, chi2_path):
 		#define global variables
 		age = self.iso_age
 		#read cmd files
-		self.scmd = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
+		scmd = pd.read_csv("{}/mc{}.a{}".format(cmd_path,self.mc_num,age),sep='\s+',names=['vi','v'],skiprows=3)
+		self.i_sCMD = scmd['v'].values - scmd['vi'].values
+		self.v_sCMD = scmd['v'].values
 		#define boundaries for CMD
-		self.obs_vi_max = np.max(self.scmd['vi'].values)
-		self.obs_vi_min = np.min(self.scmd['vi'].values)
-		self.obs_v_max = np.max(self.scmd['v'].values)
-		self.obs_v_min = np.min(self.scmd['v'].values)
-		#define grids for CMD
-		vi_mid = (self.obs_vi_max + self.obs_vi_min)/2
-		v_mid = (self.obs_v_max + self.obs_v_min)/2
-		self.vi_grids = np.linspace(self.obs_vi_min - (vi_mid - self.obs_vi_min), self.obs_vi_max  + (self.obs_vi_max  - vi_mid), grid_size*2+1)
-		self.v_grids = np.linspace(self.obs_v_min - (v_mid - self.obs_v_min), self.obs_v_max + (self.obs_v_max - v_mid), grid_size*2+1)
-		#find pdf for observation
-		self.PDF_sCMD = fastkde.pdf(self.scmd['vi'].values, self.scmd['v'].values, axes=np.vstack((self.vi_grids, self.v_grids)),do_xarray_subset=False, var_names = ['vi', 'v'])
-		self.mask = self.PDF_sCMD.values > 0.01
+		self.i_obs_max = np.max(self.obs_data[:,0])
+		self.i_obs_min = np.min(self.obs_data[:,0])
+		self.v_obs_max = np.max(self.obs_data[:,1])
+		self.v_obs_min = np.min(self.obs_data[:,1])
 		#iteratively find the minimum chi2 value
-		res = gp_minimize(self.kde_chi2,                  # the function to minimize
-				[(dm_min, dm_max), (red_min, red_max)],      # the bounds on each dimension of x
-				acq_func="EI",      # the acquisition function
-				n_calls=50,         # the number of evaluations of f
-				n_random_starts=20,
-				verbose=False)
-		bin_num = np.sum(np.where(self.mask,1,0)) - 22
-		chi2_fit, dm_fit, red_fit = res['fun']/bin_num, res['x'][0], res['x'][1]
+		pbounds = {'dm': (dm_min, dm_max), 'red': (red_min, red_max)}
+		optimizer = BayesianOptimization(
+			f=self.dm_red_kde,
+			pbounds=pbounds,
+			verbose=0
+		)
+		optimizer.maximize(
+			init_points=100,
+			n_iter=100,
+		)
 		#write out the result
-		retval = np.array([self.iso_age, dm_fit, red_fit, chi2_fit, bin_num])
+		retval = np.array([self.iso_age, optimizer.max['params']['dm'], optimizer.max['params']['red'], -optimizer.max['target']])
 		#print(chi2)
 		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
 
 
-	def __init__(self, GC_name, mc_num, iso_age, grid_size=64 ,VVI=True, bin_percent=0.2):
+	def __init__(self, GC_name, mc_num, iso_age, bw = 0.15, grid_size=1000 ,VVI=False, bin_percent=0.2):
 		#VVI is the flag. When True, fit CMD (vi vs v). When False, fit (i vs v)
 		self.VVI = VVI
 		#define distance modulus and reddening ranges
@@ -432,6 +422,8 @@ class kde(utiles):
 		self.bin_percent = bin_percent
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
+		self.n_grid = grid_size
+		self.bw = bw
 		#define all the path for read and write
 		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		chi2_path = data_path + "{}/outchi2".format(GC_name)
@@ -444,7 +436,7 @@ class kde(utiles):
 		self.check_directories(iso_path)
 		#run code
 		self.read_obs(obs_data_path)
-		self.main(cmd_path, dm_max, dm_min, red_max, red_min,chi2_path,grid_size)
+		self.main(cmd_path, dm_max, dm_min, red_max, red_min,chi2_path)
 		print("done mc{}".format(self.mc_num))
 
 class chi2(utiles):
