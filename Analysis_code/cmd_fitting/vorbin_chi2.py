@@ -13,6 +13,9 @@ from skopt import gp_minimize
 from scipy.interpolate import LinearNDInterpolator
 from global_var import define_range, define_N_true_obs, define_N_phot, sCMD_vars
 from path_config import data_path, resample_path,repo_path,obs_type
+from KDEpy import FFTKDE
+from bayes_opt import BayesianOptimization
+from scipy.spatial.distance import jensenshannon
 
 np.seterr(divide='ignore', invalid='ignore')
 #from bayes_opt import BayesianOptimization
@@ -361,9 +364,6 @@ class utiles:
 
 #rewrite kde class to cut obs data instead
 class kde(utiles):
-	from KDEpy import FFTKDE
-	from bayes_opt import BayesianOptimization
-	from scipy.spatial.distance import jensenshannon
 
 	def dm_red_kde(self, dm, red):
 		i_sCMD_CR = self.i_sCMD + dm - red
@@ -379,7 +379,7 @@ class kde(utiles):
 		grid_i = np.linspace(self.i_obs_min-epsilon,self.i_obs_max+epsilon,self.n_grid)
 		grid_v = np.linspace(self.v_obs_min-epsilon,self.v_obs_max+epsilon,self.n_grid)
 		grid = np.flip(np.stack(np.meshgrid(grid_v, grid_i), -1).reshape(-1, 2),axis=1)
-		y_obs = FFTKDE(kernel='gaussian', bw=self.bw, norm=1).fit(data = np.vstack([self.i_obs,self.v_obs]).T).evaluate(grid)
+		y_obs = FFTKDE(kernel='gaussian', bw=self.bw, norm=1).fit(data = self.obs_data).evaluate(grid)
 		y_sCMD = FFTKDE(kernel='gaussian', bw=self.bw, norm=1).fit(data = np.vstack([i_sCMD_CR,v_sCMD_CR]).T).evaluate(grid)
 		mask = (y_obs >= 0) & (y_sCMD >= 0)
 		return -jensenshannon(y_obs[mask],y_sCMD[mask])
@@ -413,17 +413,17 @@ class kde(utiles):
 		pd.DataFrame(retval).to_csv("{}/chi2_a{}_mc{}".format(chi2_path,self.iso_age,self.mc_num),header=None, index=None)
 
 
-	def __init__(self, GC_name, mc_num, iso_age, bw = 0.15, grid_size=1000 ,VVI=False, bin_percent=0.2):
+	def __init__(self, GC_name, mc_num, iso_age, epsilon = 1e-6, bw = 0.15, grid_size=1000 ,VVI=False):
 		#VVI is the flag. When True, fit CMD (vi vs v). When False, fit (i vs v)
 		self.VVI = VVI
 		#define distance modulus and reddening ranges
 		self.feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
 		#define other global variables
-		self.bin_percent = bin_percent
 		self.mc_num = str(mc_num)
 		self.iso_age = str(iso_age)
 		self.n_grid = grid_size
 		self.bw = bw
+		self.epsilon = epsilon
 		#define all the path for read and write
 		obs_data_path = data_path + "{}/simulateCMD/{}_{}".format(GC_name,GC_name,obs_type)
 		chi2_path = data_path + "{}/outchi2".format(GC_name)
