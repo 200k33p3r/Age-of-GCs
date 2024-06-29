@@ -6,6 +6,7 @@ from scipy.interpolate import CubicSpline
 from skopt import gp_minimize
 from global_var import define_range
 from path_config import data_path
+import sys
 
 def read_iso(file_path):
     # Read the content of the file
@@ -58,19 +59,20 @@ def simple_fit(mc_num, iso_path):
                       n_random_starts=500,
                       verbose=False)
             chi2_fit, dm_fit, red_fit = res['fun'], res['x'][0], res['x'][1]
-            retval.append([mc_num, age, chi2_fit, dm_fit, red_fit])
-        return pd.DataFrame(columns = ['mc_num','age','chi2','dm','red'],data =retval)
+            retval.append([ age, dm_fit, red_fit, chi2_fit,mc_num])
+        return pd.DataFrame(columns = ['age','dm','red','chi2','mc_num'],data =retval)
     except:
         pass
 
-def __init__(GC_name, mc_num):
-    global V_SGB, feh, dm_max, dm_min, red_max, red_min, vi_obs
-    V_SGB = 18.85
-    feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
-    iso_path = data_path + "{}/outiso".format(GC_name)
-    chi2_path = data_path + "{}/outchi2_iso".format(GC_name)
-    #read obs data
-    obs = pd.read_csv("{}_obs_iso.dat".format(GC_name))
-    vi_obs = obs['vi'].values
-    #calculdate chi2 and write
-    simple_fit(mc_num, iso_path).to_csv("{}/chi2_mc{}.csv".format(chi2_path, mc_num), index=False)
+global GC_name, V_SGB, feh, dm_max, dm_min, red_max, red_min, vi_obs
+GC_name = str(sys.argv[1])
+mc_num = str(sys.argv[2])
+V_SGB = 18.85
+feh, dm_max, dm_min, red_max, red_min = define_range(GC_name)
+iso_path = data_path + "{}/outiso".format(GC_name)
+chi2_path = data_path + "{}/outchi2_iso".format(GC_name)
+#read obs data
+obs = pd.read_csv("{}_obs_iso.dat".format(GC_name))
+vi_obs = obs['vi'].values
+#calculdate chi2 and write
+simple_fit(mc_num, iso_path).to_csv("{}/chi2_mc{}.csv".format(chi2_path, mc_num), index=False)
