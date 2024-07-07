@@ -66,13 +66,13 @@ def define_range(GC_name):
         red_max = 0.10
         red_min = 0.0
     elif GC_name == 'NGC4147':
-        feh=225
+        feh=182
         dm_max = 16.5
         dm_min = 16.2
         red_max = 0.03
         red_min = 0.0
     elif GC_name == 'NGC5053':
-        feh=182
+        feh=225
         dm_max = 16.4
         dm_min = 16.1
         red_max = 0.03

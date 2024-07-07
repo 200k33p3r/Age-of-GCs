@@ -35,8 +35,8 @@ def read_iso(file_path):
             ages.append(int(float(age_value)))
 
             # Append the dataframe to the list
-            mask = np.argsort(df['v'].values)
-            iso_css.append(CubicSpline(df['v'].values[mask], df['vi'].values[mask]))
+            df_clean = df.drop_duplicates(subset=['v']).sort_values(by='v').copy()
+            iso_css.append(CubicSpline(df_clean['v'].values, df_clean['vi'].values))
     return ages, iso_css
 
 def dm_red_search(theta):
