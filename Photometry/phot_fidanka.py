@@ -59,8 +59,8 @@ class phot:
             self.V_diff = 31.4
             self.I_diff = self.V_diff-0.897
         elif GC_name == 'M15':
-            self.V_diff = 31.86
-            self.I_diff = self.V_diff-0.713
+            self.V_diff = 31.638
+            self.I_diff = self.V_diff-0.728
         elif GC_name == 'M30':
             self.V_diff = 31.70
             self.I_diff = self.V_diff-0.885
