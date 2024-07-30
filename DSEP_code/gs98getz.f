@@ -12,6 +12,7 @@ c
       implicit none
       real*8 awt(23), a(23), b(23), b1(23),sum1,cln,sum,sumam,sumz
       real*8 feh,alpha,erra(23),errb(23),errb1(23),errsum,errsumz
+Cf2py intent(out) sumz      
       integer i
       character*2 cname(23)  
       character*20 cfeh,cafe
