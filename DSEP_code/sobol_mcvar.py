@@ -72,6 +72,7 @@ class genetatemcvar:
                 #give up and increase the number of samples
                 m += 1
             sobol_seq = self.generate_sobol(m)
+            resample_runs += 1
             masks = []
             for i in range(len(bound_list)):
                 masks.append(sobol_seq[:,bound_list[i]] > lower_bound[i])
