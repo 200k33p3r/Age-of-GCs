@@ -1,4 +1,4 @@
-import DSEP_code.MC_var_generator_sobol.sobol_mcvar as sobol_mcvar
+import sobol_mcvar
 import os
 
 outpath = os.getcwd()
