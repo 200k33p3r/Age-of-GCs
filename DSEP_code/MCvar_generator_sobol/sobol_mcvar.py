@@ -54,7 +54,7 @@ class genetatemcvar:
         self.MC_var = MC_var.copy()
         #end exclusive
         Param_set_num = mc_end - mc_start
-        m = np.floor(np.log2(Param_set_num))
+        m = int(np.ceil(np.log2(Param_set_num)))
         sobol_seq = self.generate_sobol(m)
         #check for hard limit
         bound_list = MC_var[MC_var['bound'] == True].index.tolist()
@@ -80,7 +80,7 @@ class genetatemcvar:
         final_sobol_seq = sobol_seq[final_mask][np.random.choice(np.arange(len(sobol_seq[final_mask])), size=Param_set_num, replace=False)]
         #now we convert the sobol sequence to actual output
         Out_MC_var = np.zeros(np.shape(final_sobol_seq))
-        for i in range(len(MC_var)-2):
+        for i in range(len(MC_var)):
             if MC_var['dist'][i] == 'Uniform':
                 Out_MC_var[:,i] = final_sobol_seq[:,i]*MC_var['var1'].iloc[i] + MC_var['var2'].iloc[i]
             elif MC_var['dist'][i] == 'Gaussian':
@@ -90,35 +90,38 @@ class genetatemcvar:
         #get feh
         Out_MC_var[:,-2] = norm.ppf(final_sobol_seq[:,-2])*sigma_feh + feh
         #get afe
-        Out_MC_var[:,-1] = norm.ppf(final_sobol_seq[:,-2])*sigma_afe + afe
+        Out_MC_var[:,-1] = norm.ppf(final_sobol_seq[:,-1])*sigma_afe + afe
         #for [a/Fe], only have tables in steps of 0.2dex, so need to round to the nearest tabulated value
-        for i in range(len(Out_MC_var[-1])):
-            if Out_MC_var[-1,i] < -0.10:
-                Out_MC_var[-1,i] = -0.20
-            elif Out_MC_var[-1,i] < 0.10:
-                Out_MC_var[-1,i] = 0.0
-            elif Out_MC_var[-1,i] < 0.30:
-                Out_MC_var[-1,i] = 0.20
-            elif Out_MC_var[-1,i] < 0.50:
-                Out_MC_var[-1,i] = 0.40
-            elif Out_MC_var[-1,i] < 0.70:
-                Out_MC_var[-1,i] = 0.60
+        for i in range(len(Out_MC_var[:,-1])):
+            if Out_MC_var[i,-1] < -0.10:
+                Out_MC_var[i,-1] = -0.20
+            elif Out_MC_var[i,-1] < 0.10:
+                Out_MC_var[i,-1] = 0.0
+            elif Out_MC_var[i,-1] < 0.30:
+                Out_MC_var[i,-1] = 0.20
+            elif Out_MC_var[i,-1] < 0.50:
+                Out_MC_var[i,-1] = 0.40
+            elif Out_MC_var[i,-1] < 0.70:
+                Out_MC_var[i,-1] = 0.60
             else:
-                Out_MC_var[-1,i] = 0.80
+                Out_MC_var[i,-1] = 0.80
         #we have 3 difference surface boundary conditions
         KATTU_idx = MC_var[MC_var['name']=='TTAU'].index.tolist()[0]
-        for i in range(len(Out_MC_var[KATTU_idx])):
-            if Out_MC_var[KATTU_idx,i] <= 1/3:
-                Out_MC_var[KATTU_idx,i] = 0
-            elif Out_MC_var[KATTU_idx,i] <= 2/3:
-                Out_MC_var[KATTU_idx,i] = 1
+        for i in range(len(Out_MC_var)):
+            if Out_MC_var[i,KATTU_idx] <= 1/3:
+                Out_MC_var[i,KATTU_idx] = 0
+            elif Out_MC_var[i,KATTU_idx] <= 2/3:
+                Out_MC_var[i,KATTU_idx] = 1
             else:
-                Out_MC_var[KATTU_idx,i] = 5
+                Out_MC_var[i,KATTU_idx] = 5
         #finally, get the correct Helium abundance
+        dydz_idx = MC_var[MC_var['name']=='dydz'].index.tolist()[0]
+        dyprim_idx = MC_var[MC_var['name']=='dyprim'].index.tolist()[0]
         z = np.zeros(len(Out_MC_var))
         for i in range(len(Out_MC_var)):
             sumz = gs98getz.gs98getz(Out_MC_var[i,-2], Out_MC_var[i,-1])
-            z[i] = 0.244 + MC_var[MC_var['name']=='dyprim']['var1'].values*Out_MC_var[i,-3] + MC_var[MC_var['name']=='dyprim']['var2'].values + sumz*(MC_var[MC_var['name']=='dydz']['var1'].values*Out_MC_var[i,-4] + MC_var[MC_var['name']=='dydz']['var2'].values)
+            print(Out_MC_var[i,dyprim_idx], Out_MC_var[i,dydz_idx])
+            z[i] = Out_MC_var[i,dyprim_idx] + sumz*Out_MC_var[i,dydz_idx]
         Out_MC_var = np.hstack((Out_MC_var,z.reshape(len(z),1)))
         #write output as a pandas dataframe
         col_names = np.concatenate((MC_var['name'].values,np.array(['FeH','alphafe','He Abundance'])))
