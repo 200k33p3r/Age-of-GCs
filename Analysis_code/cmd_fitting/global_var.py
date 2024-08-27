@@ -32,6 +32,10 @@ def sCMD_vars(GC_name):
         feh=200
         binary= 0.066
         pdmf= -1.14  
+    elif GC_name == '47tuc':
+        feh='077'
+        binary= 0.009
+        pdmf= -0.84 
     return feh, binary, pdmf
 
 def define_range(GC_name):
@@ -82,6 +86,12 @@ def define_range(GC_name):
         dm_max = 16.25
         dm_min = 15.95
         red_max = 0.03
+        red_min = 0.0
+    elif GC_name == '47Tuc':
+        feh='077'
+        dm_max = 13.45
+        dm_min = 13.15
+        red_max = 0.05
         red_min = 0.0
     return feh, dm_max, dm_min, red_max, red_min
 
