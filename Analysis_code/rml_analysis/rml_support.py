@@ -217,7 +217,7 @@ def writeout(dp,wrt_path):
 #                 data[3*i+2,df[df['Age'] == age]['EEP']] = 10**(df[df['Age'] == age]['LogRRs'])
 #         df = pd.DataFrame(data,index=arrays)
 #     return mc_num, df, age_list
-def read_iso(iso_path, iso_header, output_format, Take_exp = None):
+def read_iso(iso_path, output_format):
     check_file(iso_path)
     mc_num = int(iso_path[-5:])
     iso = open(iso_path, 'r')
@@ -227,31 +227,36 @@ def read_iso(iso_path, iso_header, output_format, Take_exp = None):
     if len_file < 10:
         raise Exception("Empty file")
     else:
-        if output_format == 'DSEP_iso':
-        #original DSED isochrone format
-            df = pd.read_csv(iso_path,sep='\s+',header=None)
-            start_indices = df[df[0] == '#EEP'].index
-            end_indices = df[df[0] == '#NPTS'].index
-            retval = []
-            for i in range(len(start_indices)):
-                if i < len(start_indices) - 1:
-                    sin_age_iso = df.iloc[start_indices[i] + 1:end_indices[i+1]].dropna(axis=1)
-                else:
-                    sin_age_iso = df.iloc[start_indices[i] + 1:].dropna(axis=1)
-                eeps = sin_age_iso[0].values
-                #remove *
-                for j in range(len(eeps)):
-                    if eeps[j][-1] == '*':
-                        eeps[j] = eeps[j][:-1]
-                sin_age_iso[0] = eeps.astype(int)
-                sin_age_iso.columns = iso_header
-                sin_age_iso['Age'] = int(float(df.iloc[end_indices[i]+1][3]))
-                retval.append(sin_age_iso)
-            iso_df = pd.concat(retval)
-            iso_df[iso_header].astype(float)
-        elif output_format == 'iso_D':
+        #give up on old iso format
+        # if output_format == 'DSEP_iso':
+        # #original DSED isochrone format
+        #     df = pd.read_csv(iso_path,sep='\s+',header=None)
+        #     start_indices = df[df[0] == '#EEP'].index
+        #     end_indices = df[df[0] == '#NPTS'].index
+        #     retval = []
+        #     for i in range(len(start_indices)):
+        #         if i < len(start_indices) - 1:
+        #             sin_age_iso = df.iloc[start_indices[i] + 1:end_indices[i+1]].dropna(axis=1)
+        #         else:
+        #             sin_age_iso = df.iloc[start_indices[i] + 1:].dropna(axis=1)
+        #         eeps = sin_age_iso[0].values
+        #         #remove *
+        #         for j in range(len(eeps)):
+        #             if eeps[j][-1] == '*':
+        #                 eeps[j] = eeps[j][:-1]
+        #         sin_age_iso[0] = eeps.astype(int)
+        #         sin_age_iso.columns = iso_header
+        #         sin_age_iso['Age'] = int(float(df.iloc[end_indices[i]+1][3]))
+        #         retval.append(sin_age_iso)
+        #     iso_df = pd.concat(retval)
+        #     iso_df[iso_header].astype(float)
+        if output_format == 'iso_D':
         #new format
+            iso_header=['EEP','Age','M/Ms','L/Ls','R/Rs']
+            Take_exp = ['L/Ls','R/Rs']
             iso_df = pd.read_csv(iso_path,names=iso_header,skiprows=1)
+        else:
+            raise Exception("{} format is not supported".format(output_format))
         if Take_exp != None:
             iso_df[Take_exp] = 10**(iso_df[Take_exp].values)
     return mc_num, iso_df
@@ -293,8 +298,6 @@ def read_iso(iso_path, iso_header, output_format, Take_exp = None):
 #     return (Mass_alter + M_err).reshape((num_stars, resample_num, 1)), (Lumi_alter + L_err).reshape((num_stars, resample_num, 1)), (Rad_alter + R_err).reshape((num_stars, resample_num, 1))
 
 def resample_stars(df_iso, candidates_df, resample_header):
-    #define names
-    resample_candidates = df_iso['Names'].copy()
     #randomly pick from the middle 80% of eeps in isochrones
     resample_idx = np.random.choice(range(int(0.1*len(df_iso)),int(0.9*len(df_iso))), size=len(candidates_df))
     #read in uncertainty

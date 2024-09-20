@@ -32,7 +32,7 @@ def sCMD_vars(GC_name):
         feh=200
         binary= 0.066
         pdmf= -1.14  
-    elif GC_name == '47tuc':
+    elif GC_name == '47Tuc':
         feh='077'
         binary= 0.009
         pdmf= -0.84 
