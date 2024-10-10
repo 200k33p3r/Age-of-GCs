@@ -36,6 +36,10 @@ def sCMD_vars(GC_name):
         feh='077'
         binary= 0.009
         pdmf= -0.84 
+    elif GC_name == 'NGC6362':
+        feh=108
+        binary= 0.046
+        pdmf= -0.58 
     return feh, binary, pdmf
 
 def define_range(GC_name):
@@ -93,6 +97,12 @@ def define_range(GC_name):
         dm_min = 13.15
         red_max = 0.05
         red_min = 0.0
+    elif GC_name == 'NGC6362':
+        feh=108
+        dm_max = 14.80
+        dm_min = 14.40
+        red_max = 0.1
+        red_min = 0.05
     return feh, dm_max, dm_min, red_max, red_min
 
 def define_N_true_obs(GC_name):
